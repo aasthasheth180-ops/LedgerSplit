@@ -105,7 +105,7 @@ python -m pytest tests/ -v
 
 ## Development Roadmap
 
-- [ ] Phase 1 — Project Foundation
+- [x] Phase 1 — Project Foundation
 - [ ] Phase 2 — Database and Authentication
 - [ ] Phase 3 — Groups and Expense Management
 - [ ] Phase 4 — Financial Ledger and Balance Transparency
@@ -117,12 +117,23 @@ python -m pytest tests/ -v
 - [ ] Phase 10 — Deployment and Production Engineering
 - [ ] Phase 11 — Theory and Interview Preparation
 
+
 ## Project Status
 
-**Phase 1: In progress**
+**Phase 1: Completed**
 
-The FastAPI foundation and initial automated tests are working. Financial ledger functionality, user accounts, expense splitting, and payment reconciliation have not yet been implemented.
+The initial FastAPI backend foundation is implemented and tested.
 
-## Project Goals
+### Completed Features
 
-LedgerSplit is being developed to explore practical backend engineering concepts, including relational database design, financial consistency, transaction isolation, concurrency control, idempotency, and reliable API development.
+- Modular FastAPI backend architecture
+- Home and health-check API endpoints
+- Environment-based application configuration
+- Automated API testing with Pytest and HTTPX2
+- Dependency management using requirements.txt
+- Git version control and GitHub repository setup
+- Project documentation
+
+**Testing:** 2 automated tests passed successfully.
+
+**Next:** Phase 2 — PostgreSQL Database and User Authentication.
