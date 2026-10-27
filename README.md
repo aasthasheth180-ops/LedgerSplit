@@ -15,7 +15,7 @@ This can lead to:
 - Outstanding balances even after someone has paid.
 - Forgotten recurring expenses and reimbursements.
 - Confusion about how much each participant owes.
-- Duplicate requests or inconsistent financial records if the backend is not designed carefully.
+- Duplicate requests or inconsistent financial records.
 - Frustration with usage limits and advertisements.
 
 ## Proposed Solution
@@ -30,41 +30,87 @@ LedgerSplit aims to provide:
 - An auditable financial ledger.
 - Idempotent, concurrency-safe transaction processing.
 
-**Note:** LedgerSplit does not process Zelle transfers or independently verify external payments. Its planned reconciliation workflow allows users to report and confirm payments made outside the application.
+**Important:** LedgerSplit does not process Zelle transfers or independently verify external payments. Its planned reconciliation workflow allows users to report and confirm payments made outside the application.
 
 ## Technology Stack
 
 | Component | Technology |
 |---|---|
 | Backend | Python, FastAPI |
-| Database (planned) | PostgreSQL |
-| ORM (planned) | SQLAlchemy |
-| Frontend (planned) | React, TypeScript |
+| Database | PostgreSQL |
+| ORM | SQLAlchemy |
+| Database migrations | Alembic |
+| Data validation | Pydantic |
+| Authentication | JWT, OAuth2 bearer tokens |
+| Password security | Argon2 |
 | Testing | Pytest, HTTPX2 |
+| Frontend (planned) | React, TypeScript |
 | Containers (planned) | Docker |
 | CI/CD (planned) | GitHub Actions |
 
 ## Current Implementation
 
-**Phase 1 — Project Foundation (in progress)**
+### Phase 1 — Project Foundation (Completed)
 
-- FastAPI application initialized.
-- Modular backend directory structure created.
-- Environment-based configuration added.
-- Home and health-check endpoints implemented.
-- Automated API tests implemented.
-- Dependency versions recorded.
+- Initialized FastAPI application.
+- Created modular backend directory structure.
+- Implemented environment-based configuration.
+- Implemented home and health-check endpoints.
+- Added automated API tests.
+- Established dependency management and Git version control.
+
+### Phase 2 — Database and Authentication (Completed)
+
+**Database integration**
+
+- Installed and configured PostgreSQL.
+- Created a dedicated application database and database role.
+- Integrated SQLAlchemy with PostgreSQL using Psycopg.
+- Implemented database sessions and dependency injection.
+- Created a persistent user model.
+- Configured Alembic migrations.
+- Created and applied the initial users table migration.
+
+**Authentication and security**
+
+- Implemented user registration.
+- Added email validation and duplicate-account handling.
+- Implemented Argon2 password hashing.
+- Implemented password verification.
+- Implemented user login and JWT access-token generation.
+- Configured token expiration.
+- Implemented authenticated user dependencies.
+- Added a protected user profile endpoint.
+- Added handling for missing, invalid, and expired authentication tokens.
+
+**Automated testing**
+
+- Configured a separate PostgreSQL test database.
+- Added isolated database fixtures.
+- Added registration, login, and protected-route tests.
+- Verified invalid authentication scenarios.
+- Confirmed all 10 automated tests pass.
+
+## API Endpoints
+
+| Method | Endpoint | Description | Authentication |
+|---|---|---|---|
+| GET | `/` | Application welcome message | No |
+| GET | `/health` | Application health check | No |
+| POST | `/auth/register` | Register a new user | No |
+| POST | `/auth/login` | Authenticate and obtain an access token | No |
+| GET | `/users/me` | Retrieve the authenticated user's profile | JWT required |
+
+Interactive API documentation is available through FastAPI Swagger UI.
 
 ## Getting Started
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/LedgerSplit.git
+git clone https://github.com/aasthasheth180-ops/LedgerSplit.git
 cd LedgerSplit
 ```
-
-Replace `YOUR_USERNAME` with the actual GitHub username.
 
 ### 2. Create a virtual environment
 
@@ -79,15 +125,40 @@ py -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+### 4. Configure PostgreSQL
 
-Copy `.env.example` to `.env`:
+Install PostgreSQL and create a development database and an application role with the necessary database permissions.
+
+The application requires a valid PostgreSQL connection string.
+
+### 5. Configure environment variables
+
+Create a `.env` file using `.env.example` as a template, if available:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-### 5. Run the application
+Configure the following values:
+
+```dotenv
+DATABASE_URL=postgresql+psycopg://USERNAME:PASSWORD@localhost:5432/ledgersplit_db
+JWT_SECRET_KEY=replace-with-a-long-random-secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+Replace the placeholders with your own local configuration. URL-encode reserved characters in database credentials.
+
+Never commit `.env`, passwords, or JWT secrets to version control.
+
+### 6. Apply database migrations
+
+```powershell
+python -m alembic upgrade head
+```
+
+### 7. Run the application
 
 ```powershell
 python -m uvicorn app.main:app --reload
@@ -97,17 +168,20 @@ API documentation: http://127.0.0.1:8000/docs
 
 Health check: http://127.0.0.1:8000/health
 
-### 6. Run automated tests
+### 8. Run automated tests
+
+Automated authentication tests use an isolated PostgreSQL test database. Configure the test database connection before running the suite.
 
 ```powershell
 python -m pytest tests/ -v
 ```
 
+**Latest verified result: 10 tests passed.**
 
 ## Development Roadmap
 
 - [x] Phase 1 — Project Foundation
-- [ ] Phase 2 — Database and Authentication
+- [x] Phase 2 — Database and Authentication
 - [ ] Phase 3 — Groups and Expense Management
 - [ ] Phase 4 — Financial Ledger and Balance Transparency
 - [ ] Phase 5 — External Payment Reconciliation
@@ -118,23 +192,18 @@ python -m pytest tests/ -v
 - [ ] Phase 10 — Deployment and Production Engineering
 - [ ] Phase 11 — Theory and Interview Preparation
 
-
 ## Project Status
 
 **Phase 1: Completed**
 
 The initial FastAPI backend foundation is implemented and tested.
 
-### Completed Features
+**Phase 2: Completed**
 
-- Modular FastAPI backend architecture
-- Home and health-check API endpoints
-- Environment-based application configuration
-- Automated API testing with Pytest and HTTPX2
-- Dependency management using requirements.txt
-- Git version control and GitHub repository setup
-- Project documentation
+PostgreSQL persistence, database migrations, registration, password security, JWT authentication, protected user endpoints, and isolated authentication tests are implemented.
 
-**Testing:** 2 automated tests passed successfully.
+**Testing:** 10 automated tests passed successfully.
 
-**Next:** Phase 2 — PostgreSQL Database and User Authentication.
+**Next:** Phase 3 — Groups and Expense Management.
+
+The next development phase will introduce group creation, group membership, shared expense records, and expense splitting. Financial ledger and settlement reconciliation functionality will be implemented in subsequent phases.
