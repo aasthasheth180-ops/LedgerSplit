@@ -176,34 +176,4 @@ Automated authentication tests use an isolated PostgreSQL test database. Configu
 python -m pytest tests/ -v
 ```
 
-**Latest verified result: 10 tests passed.**
-
-## Development Roadmap
-
-- [x] Phase 1 — Project Foundation
-- [x] Phase 2 — Database and Authentication
-- [ ] Phase 3 — Groups and Expense Management
-- [ ] Phase 4 — Financial Ledger and Balance Transparency
-- [ ] Phase 5 — External Payment Reconciliation
-- [ ] Phase 6 — Reliability and Concurrency
-- [ ] Phase 7 — Recurring Bills and Notifications
-- [ ] Phase 8 — Smart Expense Features
-- [ ] Phase 9 — Frontend and User Experience
-- [ ] Phase 10 — Deployment and Production Engineering
-- [ ] Phase 11 — Theory and Interview Preparation
-
-## Project Status
-
-**Phase 1: Completed**
-
-The initial FastAPI backend foundation is implemented and tested.
-
-**Phase 2: Completed**
-
-PostgreSQL persistence, database migrations, registration, password security, JWT authentication, protected user endpoints, and isolated authentication tests are implemented.
-
-**Testing:** 10 automated tests passed successfully.
-
-**Next:** Phase 3 — Groups and Expense Management.
-
-The next development phase will introduce group creation, group membership, shared expense records, and expense splitting. Financial ledger and settlement reconciliation functionality will be implemented in subsequent phases.
+e next development phase will introduce group creation, group membership, shared expense records, and expense splitting. Financial ledger and settlement reconciliation functionality will be implemented in subsequent phases.
