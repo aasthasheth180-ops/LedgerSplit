@@ -11,7 +11,10 @@ from app.db.database import Base, get_db
 from app.main import app
 
 # Import models so SQLAlchemy knows which tables to create.
+# Import all models so SQLAlchemy registers their table metadata.
 from app.models.user import User  # noqa: F401
+from app.models.group import Group  # noqa: F401
+from app.models.group_member import GroupMember  # noqa: F401
 
 
 def validate_test_database():
