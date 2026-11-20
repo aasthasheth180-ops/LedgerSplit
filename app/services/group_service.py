@@ -6,7 +6,7 @@ from app.models.group_member import GroupMember
 from sqlalchemy import select
 from fastapi import HTTPException, status
 from app.models.user import User
-
+from sqlalchemy.exc import IntegrityError
 
 def create_group(
     db: Session,
@@ -125,6 +125,23 @@ def add_group_member(
         db.refresh(member)
 
         return member
+
+    except IntegrityError as exc:
+        db.rollback()
+
+        constraint_name = getattr(
+            getattr(exc.orig, "diag", None),
+            "constraint_name",
+            None,
+        )
+
+        if constraint_name == "uq_group_members_group_user":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User is already a group member",
+            ) from exc
+
+        raise
 
     except Exception:
         db.rollback()

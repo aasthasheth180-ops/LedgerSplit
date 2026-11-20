@@ -3,7 +3,11 @@ from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.user import User
 from app.core.security import hash_password
+from unittest.mock import patch
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 
+from app.services.group_service import add_group_member
 
 def test_create_group_assigns_owner(client, db_session):
     # Create a test user.
@@ -617,3 +621,74 @@ def test_regular_member_can_view_group_members(client):
     roles = {member["role"] for member in members}
 
     assert roles == {"owner", "member"}
+
+
+def test_duplicate_membership_integrity_error_returns_409(
+    db_session,
+):
+    # Create an owner and another user.
+    owner = User(
+        full_name="Race Test Owner",
+        email="race_owner@example.com",
+        hashed_password=hash_password("TestPassword123!"),
+    )
+    member = User(
+        full_name="Race Test Member",
+        email="race_member@example.com",
+        hashed_password=hash_password("TestPassword123!"),
+    )
+
+    db_session.add_all([owner, member])
+    db_session.commit()
+
+    # Create a group and assign its owner.
+    group = Group(
+        name="Race Test Group",
+        created_by=owner.id,
+    )
+    db_session.add(group)
+    db_session.flush()
+
+    db_session.add(
+        GroupMember(
+            group_id=group.id,
+            user_id=owner.id,
+            role="owner",
+        )
+    )
+    db_session.commit()
+
+    # Simulate PostgreSQL reporting the known unique constraint.
+    class FakeDatabaseError:
+        diag = type(
+            "Diagnostic",
+            (),
+            {"constraint_name": "uq_group_members_group_user"},
+        )()
+
+    database_error = IntegrityError(
+        statement="INSERT INTO group_members ...",
+        params={},
+        orig=FakeDatabaseError(),
+    )
+
+    # Force the insert transaction to fail.
+    with patch.object(
+        db_session,
+        "commit",
+        side_effect=database_error,
+    ):
+        try:
+            add_group_member(
+                db=db_session,
+                group_id=group.id,
+                user_id=member.id,
+                requester_id=owner.id,
+            )
+            assert False, "Expected HTTPException"
+        except HTTPException as exc:
+            assert exc.status_code == 409
+            assert exc.detail == "User is already a group member"
+
+    # Verify that the failed operation was rolled back.
+    assert not db_session.in_transaction()

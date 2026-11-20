@@ -4,7 +4,7 @@ import jwt
 
 from app.core.config import settings
 
-
+from app.models.user import User
 
 
 
@@ -191,6 +191,75 @@ def test_get_profile_with_expired_token(client):
         headers={
             "Authorization": f"Bearer {expired_token}"
         },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == (
+        "Invalid or expired authentication token"
+    )
+
+
+def test_inactive_user_cannot_access_profile(client, db_session):
+    # Step 1: Register a new user.
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "full_name": "Inactive Test User",
+            "email": "inactive@example.com",
+            "password": "SecurePassword123!",
+        },
+    )
+
+    assert register_response.status_code == 201
+
+    user_id = register_response.json()["id"]
+
+    # Step 2: Log in while the account is active.
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "inactive@example.com",
+            "password": "SecurePassword123!",
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    # Step 3: Disable the account in PostgreSQL.
+    user = db_session.get(User, user_id)
+
+    assert user is not None
+
+    user.is_active = False
+    db_session.commit()
+
+    # Step 4: Try using the previously valid JWT.
+    response = client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    # Step 5: Verify that access is denied.
+    assert response.status_code == 401
+    assert response.json()["detail"] == (
+        "Invalid or expired authentication token"
+    )
+
+def test_token_without_expiration_is_rejected(client):
+    token = jwt.encode(
+        {
+            "sub": "1",
+            "iat": datetime.now(timezone.utc),
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )
+
+    response = client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 401
