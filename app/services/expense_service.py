@@ -17,10 +17,16 @@ def create_expense(
     group_id: int,
     payer_id: int,
     payload: ExpenseCreate,
+    idempotency_key: str | None = None,
 ) -> tuple[Expense, list[ExpenseSplit]]:
 
-    # 1. Check that the group exists.
-    group = db.get(Group, group_id)
+# 1. Lock the group before changing its financial ledger.
+# This coordinates expense creation with payment confirmation.
+    group = db.scalar(
+            select(Group)
+            .where(Group.id == group_id)
+            .with_for_update()
+        )
 
     if group is None:
         raise HTTPException(
@@ -42,8 +48,65 @@ def create_expense(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this group",
         )
+    if payer_id not in member_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this group",
+        )
+
+    # CHANGE B — Check whether this expense already exists.
+    if payer_id not in member_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this group",
+        )
+
+    # CHANGE B — Check whether this expense already exists.
+    if idempotency_key is not None:
+        existing_expense = db.scalar(
+            select(Expense).where(
+                Expense.group_id == group_id,
+                Expense.paid_by == payer_id,
+                Expense.idempotency_key == idempotency_key,
+            )
+        )
+
+        if existing_expense is not None:
+            existing_splits = list(
+                db.scalars(
+                    select(ExpenseSplit)
+                    .where(ExpenseSplit.expense_id == existing_expense.id)
+                    .order_by(ExpenseSplit.id)
+                ).all()
+            )
+
+            requested_splits = {
+                split.user_id: split.amount_owed
+                for split in payload.splits
+            }
+
+            saved_splits = {
+                split.user_id: split.amount_owed
+                for split in existing_splits
+            }
+
+            if (
+                existing_expense.description != payload.description.strip()
+                or existing_expense.amount != payload.amount
+                or saved_splits != requested_splits
+                or len(payload.splits) != len(requested_splits)
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Idempotency key already used for a different expense",
+                )
+
+            db.commit()
+            return existing_expense, existing_splits
 
     # 3. Prevent duplicate participants.
+    split_user_ids = [split.user_id for split in payload.splits]
+# 3. Prevent duplicate participants.
     split_user_ids = [
         split.user_id for split in payload.splits
     ]
@@ -80,6 +143,7 @@ def create_expense(
             paid_by=payer_id,
             description=payload.description.strip(),
             amount=payload.amount,
+            idempotency_key=idempotency_key,
         )
 
         if not expense.description:

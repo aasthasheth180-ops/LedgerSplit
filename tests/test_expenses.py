@@ -1372,3 +1372,291 @@ def test_multiple_expenses_have_correct_splits(client):
         owner_id: "20.00",
         member_id: "60.00",
     }
+
+
+def test_expense_idempotency_same_key_returns_same_expense(
+    client,
+    db_session,
+):
+    from sqlalchemy import select, func
+    from app.models.expense import Expense
+    from app.models.expense_split import ExpenseSplit
+
+    password = "TestPassword123!"
+
+    # 1. Register a user.
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "full_name": "Idempotency Test User",
+            "email": "expense_idempotency@example.com",
+            "password": password,
+        },
+    )
+    assert register_response.status_code == 201
+    user_id = register_response.json()["id"]
+
+    # 2. Log in.
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "expense_idempotency@example.com",
+            "password": password,
+        },
+    )
+    assert login_response.status_code == 200
+
+    headers = {
+        "Authorization": (
+            f"Bearer {login_response.json()['access_token']}"
+        ),
+        "Idempotency-Key": "expense-retry-test-001",
+    }
+
+    # 3. Create a group.
+    group_response = client.post(
+        "/groups",
+        json={"name": "Idempotency Test Group"},
+        headers=headers,
+    )
+    assert group_response.status_code == 201
+    group_id = group_response.json()["id"]
+
+    # 4. Prepare one expense request.
+    payload = {
+        "description": "Groceries",
+        "amount": "100.00",
+        "splits": [
+            {
+                "user_id": user_id,
+                "amount_owed": "100.00",
+            }
+        ],
+    }
+
+    # 5. Submit the same request twice.
+    first_response = client.post(
+        f"/groups/{group_id}/expenses",
+        json=payload,
+        headers=headers,
+    )
+
+    second_response = client.post(
+        f"/groups/{group_id}/expenses",
+        json=payload,
+        headers=headers,
+    )
+
+    # 6. Both requests should succeed.
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
+
+    # 7. Both responses must contain the same expense ID.
+    expense_id = first_response.json()["id"]
+    assert second_response.json()["id"] == expense_id
+
+    # 8. Only one expense should exist for this key.
+    expense_count = db_session.scalar(
+        select(func.count())
+        .select_from(Expense)
+        .where(
+            Expense.group_id == group_id,
+            Expense.idempotency_key == "expense-retry-test-001",
+        )
+    )
+    assert expense_count == 1
+
+    # 9. The expense should have only one saved split.
+    split_count = db_session.scalar(
+        select(func.count())
+        .select_from(ExpenseSplit)
+        .where(ExpenseSplit.expense_id == expense_id)
+    )
+    assert split_count == 1
+
+def test_expense_idempotency_same_key_different_amount_returns_409(
+    client,
+    db_session,
+):
+    from sqlalchemy import select, func
+    from app.models.expense import Expense
+
+    password = "TestPassword123!"
+
+    # 1. Register user.
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "full_name": "Expense Conflict User",
+            "email": "expense_conflict@example.com",
+            "password": password,
+        },
+    )
+    assert register_response.status_code == 201
+    user_id = register_response.json()["id"]
+
+    # 2. Authenticate.
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "expense_conflict@example.com",
+            "password": password,
+        },
+    )
+    assert login_response.status_code == 200
+
+    headers = {
+        "Authorization": (
+            f"Bearer {login_response.json()['access_token']}"
+        ),
+        "Idempotency-Key": "expense-conflict-001",
+    }
+
+    # 3. Create group.
+    group_response = client.post(
+        "/groups",
+        json={"name": "Expense Conflict Group"},
+        headers=headers,
+    )
+    assert group_response.status_code == 201
+    group_id = group_response.json()["id"]
+
+    # 4. Create the first expense for $100.
+    first_response = client.post(
+        f"/groups/{group_id}/expenses",
+        json={
+            "description": "Groceries",
+            "amount": "100.00",
+            "splits": [
+                {
+                    "user_id": user_id,
+                    "amount_owed": "100.00",
+                }
+            ],
+        },
+        headers=headers,
+    )
+    assert first_response.status_code == 201
+
+    # 5. Retry with the same key but a different amount.
+    second_response = client.post(
+        f"/groups/{group_id}/expenses",
+        json={
+            "description": "Groceries",
+            "amount": "200.00",
+            "splits": [
+                {
+                    "user_id": user_id,
+                    "amount_owed": "200.00",
+                }
+            ],
+        },
+        headers=headers,
+    )
+
+    # 6. Conflicting request must be rejected.
+    assert second_response.status_code == 409
+    assert second_response.json()["detail"] == (
+        "Idempotency key already used for a different expense"
+    )
+
+    # 7. Only the original expense should exist.
+    expense_count = db_session.scalar(
+        select(func.count())
+        .select_from(Expense)
+        .where(
+            Expense.group_id == group_id,
+            Expense.idempotency_key == "expense-conflict-001",
+        )
+    )
+    assert expense_count == 1
+
+
+def test_expense_idempotency_different_keys_create_separate_expenses(
+    client,
+    db_session,
+):
+    from sqlalchemy import select, func
+    from app.models.expense import Expense
+
+    password = "TestPassword123!"
+
+    # Register a user.
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "full_name": "Different Keys User",
+            "email": "expense_different_keys@example.com",
+            "password": password,
+        },
+    )
+    assert register_response.status_code == 201
+    user_id = register_response.json()["id"]
+
+    # Authenticate.
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "expense_different_keys@example.com",
+            "password": password,
+        },
+    )
+    assert login_response.status_code == 200
+
+    auth_header = (
+        f"Bearer {login_response.json()['access_token']}"
+    )
+
+    # Create a group.
+    group_response = client.post(
+        "/groups",
+        json={"name": "Different Keys Group"},
+        headers={"Authorization": auth_header},
+    )
+    assert group_response.status_code == 201
+    group_id = group_response.json()["id"]
+
+    payload = {
+        "description": "Groceries",
+        "amount": "100.00",
+        "splits": [
+            {
+                "user_id": user_id,
+                "amount_owed": "100.00",
+            }
+        ],
+    }
+
+    # First legitimate expense.
+    first_response = client.post(
+        f"/groups/{group_id}/expenses",
+        json=payload,
+        headers={
+            "Authorization": auth_header,
+            "Idempotency-Key": "groceries-monday-001",
+        },
+    )
+
+    # Second legitimate expense with a different key.
+    second_response = client.post(
+        f"/groups/{group_id}/expenses",
+        json=payload,
+        headers={
+            "Authorization": auth_header,
+            "Idempotency-Key": "groceries-tuesday-002",
+        },
+    )
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
+
+    # Different keys must create different expense IDs.
+    assert first_response.json()["id"] != second_response.json()["id"]
+
+    # Both records must exist in the database.
+    expense_count = db_session.scalar(
+        select(func.count())
+        .select_from(Expense)
+        .where(Expense.group_id == group_id)
+    )
+    assert expense_count == 2

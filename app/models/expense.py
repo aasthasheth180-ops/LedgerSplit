@@ -9,6 +9,7 @@ from sqlalchemy import (
     String,
     CheckConstraint,
     func,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,13 +18,18 @@ from app.db.database import Base
 
 class Expense(Base):
     __tablename__ = "expenses"
-
     __table_args__ = (
-        CheckConstraint(
-            "amount > 0",
-            name="ck_expenses_positive_amount",
-        ),
-    )
+    CheckConstraint(
+        "amount > 0",
+        name="ck_expenses_positive_amount",
+    ),
+    UniqueConstraint(
+        "group_id",
+        "paid_by",
+        "idempotency_key",
+        name="uq_expenses_group_payer_idempotency",
+    ),
+)
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -49,6 +55,11 @@ class Expense(Base):
         Numeric(12, 2),
         nullable=False,
     )
+
+    idempotency_key: Mapped[str | None] = mapped_column(
+    String(128),
+    nullable=True,
+)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

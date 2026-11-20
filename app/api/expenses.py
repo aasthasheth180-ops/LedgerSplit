@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Header, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -28,12 +28,19 @@ def create_group_expense(
     payload: ExpenseCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(
+        default=None,
+        alias="Idempotency-Key",
+        min_length=1,
+        max_length=128,
+    ),
 ):
     expense, splits = create_expense(
         db=db,
         group_id=group_id,
         payer_id=current_user.id,
         payload=payload,
+        idempotency_key=idempotency_key,
     )
 
     return ExpenseResponse(
@@ -45,8 +52,6 @@ def create_group_expense(
         created_at=expense.created_at,
         splits=splits,
     )
-
-
 
 
 @router.get(

@@ -1,5 +1,6 @@
 import pytest
-
+# Register all SQLAlchemy models.
+import app.models  # noqa: F401
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url

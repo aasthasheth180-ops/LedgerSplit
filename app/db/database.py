@@ -25,10 +25,18 @@ class Base(DeclarativeBase):
     pass
 
 
+
 def get_db():
     db = SessionLocal()
 
     try:
         yield db
+
+    except Exception:
+        # Undo any uncommitted database changes if the request fails.
+        db.rollback()
+        raise
+
     finally:
+        # Always release the database session and connection.
         db.close()
