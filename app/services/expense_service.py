@@ -48,18 +48,6 @@ def create_expense(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this group",
         )
-    if payer_id not in member_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this group",
-        )
-
-    # CHANGE B — Check whether this expense already exists.
-    if payer_id not in member_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this group",
-        )
 
     # CHANGE B — Check whether this expense already exists.
     if idempotency_key is not None:
@@ -105,8 +93,6 @@ def create_expense(
             return existing_expense, existing_splits
 
     # 3. Prevent duplicate participants.
-    split_user_ids = [split.user_id for split in payload.splits]
-# 3. Prevent duplicate participants.
     split_user_ids = [
         split.user_id for split in payload.splits
     ]
