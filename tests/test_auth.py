@@ -172,16 +172,52 @@ def test_get_profile_with_invalid_token(client):
 
 
 def test_get_profile_with_expired_token(client):
+
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "full_name": "Expired Token User",
+            "email": "expiredtoken@example.com",
+            "password": "SecurePassword123!",
+        },
+    )
+
+    assert register_response.status_code == 201
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "expiredtoken@example.com",
+            "password": "SecurePassword123!",
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    valid_token = login_response.json()["access_token"]
+
+    payload = jwt.decode(
+        valid_token,
+        settings.JWT_SECRET_KEY,
+        algorithms=[settings.JWT_ALGORITHM],
+    )
+
+    valid_response = client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {valid_token}"},
+    )
+
+    assert valid_response.status_code == 200
+
     expired_time = datetime.now(timezone.utc) - timedelta(
         minutes=10
     )
 
+    payload["iat"] = expired_time - timedelta(minutes=30)
+    payload["exp"] = expired_time
+
     expired_token = jwt.encode(
-        {
-            "sub": "1",
-            "iat": expired_time - timedelta(minutes=30),
-            "exp": expired_time,
-        },
+        payload,
         settings.JWT_SECRET_KEY,
         algorithm=settings.JWT_ALGORITHM,
     )
@@ -194,6 +230,7 @@ def test_get_profile_with_expired_token(client):
     )
 
     assert response.status_code == 401
+
     assert response.json()["detail"] == (
         "Invalid or expired authentication token"
     )
@@ -248,21 +285,60 @@ def test_inactive_user_cannot_access_profile(client, db_session):
     )
 
 def test_token_without_expiration_is_rejected(client):
-    token = jwt.encode(
-        {
-            "sub": "1",
-            "iat": datetime.now(timezone.utc),
+
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "full_name": "Missing Expiration User",
+            "email": "missingexpiration@example.com",
+            "password": "SecurePassword123!",
         },
+    )
+
+    assert register_response.status_code == 201
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "missingexpiration@example.com",
+            "password": "SecurePassword123!",
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    valid_token = login_response.json()["access_token"]
+
+    payload = jwt.decode(
+        valid_token,
+        settings.JWT_SECRET_KEY,
+        algorithms=[settings.JWT_ALGORITHM],
+    )
+
+    valid_response = client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {valid_token}"},
+    )
+
+    assert valid_response.status_code == 200
+
+    del payload["exp"]
+
+    token = jwt.encode(
+        payload,
         settings.JWT_SECRET_KEY,
         algorithm=settings.JWT_ALGORITHM,
     )
 
     response = client.get(
         "/users/me",
-        headers={"Authorization": f"Bearer {token}"},
+        headers={
+            "Authorization": f"Bearer {token}"
+        },
     )
 
     assert response.status_code == 401
+
     assert response.json()["detail"] == (
         "Invalid or expired authentication token"
     )

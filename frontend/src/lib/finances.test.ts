@@ -1,0 +1,24 @@
+import { describe, expect, it } from 'vitest';
+import { parseMinor, minorToDecimal } from './currency';
+import { calculateSplits } from './splits';
+import { createIdempotencyTracker, idempotentPost } from './idempotency';
+const people = [{userId:1},{userId:2},{userId:3}];
+describe('financial helpers', () => {
+  it('parses exact cents', () => expect(parseMinor('0.29','USD')).toBe(29));
+  it('parses negative balances', () => expect(parseMinor('-50.00','USD')).toBe(-5000));
+  it('accepts whole JPY API decimals', () => expect(parseMinor('100.00','JPY')).toBe(100));
+  it('rejects fractional yen', () => expect(() => parseMinor('1.01','JPY')).toThrow());
+  it('rejects excess precision', () => expect(() => parseMinor('1.001','USD')).toThrow());
+  it('rejects empty amounts', () => expect(() => parseMinor('','USD')).toThrow());
+  it('formats integer cents', () => expect(minorToDecimal(-1,'USD')).toBe('-0.01'));
+  it('allocates equal remainders', () => expect(calculateSplits('100','USD','Equal',people).map(p=>p.amount_owed)).toEqual(['33.34','33.33','33.33']));
+  it('allocates whole yen', () => expect(calculateSplits('100','JPY','Equal',people).map(p=>p.amount_owed)).toEqual(['34','33','33']));
+  it('validates exact shares', () => expect(calculateSplits('1','USD','Exact',[{userId:1,value:'0.30'},{userId:2,value:'0.70'}]).map(p=>p.amount_owed)).toEqual(['0.30','0.70']));
+  it('rejects negative shares', () => expect(() => calculateSplits('1','USD','Exact',[{userId:1,value:'-1'},{userId:2,value:'2'}])).toThrow());
+  it('rejects mismatched exact shares', () => expect(() => calculateSplits('1','USD','Exact',[{userId:1,value:'0.50'}])).toThrow());
+  it('allocates percentage rounding safely', () => expect(calculateSplits('0.01','USD','Percent',[{userId:1,value:'33.33'},{userId:2,value:'33.33'},{userId:3,value:'33.34'}]).map(p=>p.amount_owed)).toEqual(['0.00','0.00','0.01']));
+  it('rejects invalid percentage totals', () => expect(() => calculateSplits('1','USD','Percent',[{userId:1,value:'99'}])).toThrow());
+  it('rejects duplicate participants', () => expect(() => calculateSplits('1','USD','Equal',[people[0],people[0]])).toThrow());
+  it('retains retry keys and rotates completed keys', () => {let i=0;const t=createIdempotencyTracker(()=>String(++i));const p={amount:'1'};expect(t.keyFor('a',p)).toBe('1');expect(t.keyFor('a',p)).toBe('1');expect(t.keyFor('b',p)).toBe('2');t.complete('a',p);expect(t.keyFor('a',p)).toBe('3');});
+  it('sends the idempotency header', () => expect(idempotentPost({amount:'1'},'key').headers).toEqual({'Idempotency-Key':'key'}));
+});

@@ -81,6 +81,10 @@ def create_expense(
             if (
                 existing_expense.description != payload.description.strip()
                 or existing_expense.amount != payload.amount
+                or existing_expense.category != payload.category
+                or existing_expense.expense_date != payload.expense_date
+                or existing_expense.reference != payload.reference
+                or existing_expense.split_method != payload.split_method
                 or saved_splits != requested_splits
                 or len(payload.splits) != len(requested_splits)
             ):
@@ -91,6 +95,15 @@ def create_expense(
 
             db.commit()
             return existing_expense, existing_splits
+
+    if group.currency == "JPY":
+        amounts = [payload.amount, *(split.amount_owed for split in payload.splits)]
+        if any(amount != amount.to_integral_value() for amount in amounts):
+            db.rollback()
+            raise HTTPException(
+                status_code=422,
+                detail="JPY amounts must be whole numbers",
+            )
 
     # 3. Prevent duplicate participants.
     split_user_ids = [
@@ -129,6 +142,10 @@ def create_expense(
             paid_by=payer_id,
             description=payload.description.strip(),
             amount=payload.amount,
+            category=payload.category,
+            expense_date=payload.expense_date,
+            reference=payload.reference,
+            split_method=payload.split_method,
             idempotency_key=idempotency_key,
         )
 

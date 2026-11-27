@@ -11,6 +11,7 @@ from app.models.payment import Payment
 from app.schemas.payment import PaymentCreate
 
 from app.services.ledger_service import calculate_group_balances
+from app.services.payment_request_service import reconcile_payment_request
 
 def create_payment(
     db: Session,
@@ -90,6 +91,16 @@ def create_payment(
             # Return the original payment without creating another.
             db.commit()
             return existing_payment
+
+    if (
+        group.currency == "JPY"
+        and payload.amount != payload.amount.to_integral_value()
+    ):
+        db.rollback()
+        raise HTTPException(
+            status_code=422,
+            detail="JPY amounts must be whole numbers",
+        )
 
     # 6. Save the payment with pending status.
     try:
@@ -235,6 +246,14 @@ def confirm_payment(
 
         payment.status = updated.status
         payment.confirmed_at = updated.confirmed_at
+
+        reconcile_payment_request(
+            db=db,
+            group_id=group_id,
+            sender_id=payment.from_user_id,
+            recipient_id=payment.to_user_id,
+            amount=payment.amount,
+        )
 
         db.commit()
 

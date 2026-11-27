@@ -1,22 +1,31 @@
-
-from fastapi import APIRouter, Depends, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    Response,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.db.database import get_db
 from app.models.user import User
+
 from app.schemas.group import (
     GroupCreate,
     GroupResponse,
     GroupMemberAdd,
     GroupMemberResponse,
 )
+
 from app.services.group_service import (
     create_group,
     get_user_groups,
     add_group_member,
     get_group_members,
+    remove_group_member,
 )
+
 
 router = APIRouter(
     prefix="/groups",
@@ -33,13 +42,23 @@ def create_new_group(
     payload: GroupCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(
+        default=None, alias="Idempotency-Key", min_length=1, max_length=128,
+    ),
 ):
     return create_group(
         db=db,
         name=payload.name,
         creator_id=current_user.id,
+        description=payload.description,
+        category=payload.category,
+        custom_category=payload.custom_category,
+        currency=payload.currency,
+        default_split=payload.default_split,
+        color=payload.color,
+        member_emails=payload.member_emails,
+        idempotency_key=idempotency_key,
     )
-
 
 
 @router.get(
@@ -73,6 +92,7 @@ def add_member_to_group(
         group_id=group_id,
         user_id=payload.user_id,
         requester_id=current_user.id,
+        email=payload.email,
     )
 
 
@@ -90,4 +110,27 @@ def list_group_members(
         db=db,
         group_id=group_id,
         requester_id=current_user.id,
+    )
+
+
+@router.delete(
+    "/{group_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def delete_group_member(
+    group_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    remove_group_member(
+        db=db,
+        group_id=group_id,
+        user_id=user_id,
+        requester_id=current_user.id,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT
     )

@@ -22,3 +22,13 @@ class UserResponse(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    remember_me: bool = False
+
+
+class GoogleLogin(BaseModel):
+    credential: str = Field(
+        min_length=1,
+        max_length=8192,
+    )
+    remember_me: bool = False
+    accepted_terms: bool = False

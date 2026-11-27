@@ -1,9 +1,10 @@
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     DateTime,
+    Date,
     ForeignKey,
     Numeric,
     String,
@@ -29,6 +30,17 @@ class Expense(Base):
         "idempotency_key",
         name="uq_expenses_group_payer_idempotency",
     ),
+
+
+    CheckConstraint(
+        "category IN ('Groceries', 'Dining', 'Home', "
+        "'Utilities', 'Travel', 'Rent', 'Other')",
+        name="ck_expenses_valid_category",
+    ),
+    CheckConstraint(
+        "split_method IN ('Equal', 'Exact', 'Percent')",
+        name="ck_expenses_valid_split_method",
+    ),
 )
 
     id: Mapped[int] = mapped_column(
@@ -53,6 +65,31 @@ class Expense(Base):
 
     amount: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
+        nullable=False,
+    )
+
+
+    category: Mapped[str] = mapped_column(
+        String(30),
+        default="Other",
+        server_default="Other",
+        nullable=False,
+    )
+
+    expense_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+    )
+
+    reference: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    split_method: Mapped[str] = mapped_column(
+        String(10),
+        default="Exact",
+        server_default="Exact",
         nullable=False,
     )
 

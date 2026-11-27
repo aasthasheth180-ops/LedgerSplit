@@ -1,0 +1,189 @@
+
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Kalam:wght@400;700&display=swap");
+
+/* Consistent typography across authentication pages */
+.auth-page {
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+/* Illustration blending — Light Mode */
+.auth-story-image {
+  mix-blend-mode: multiply;
+  -webkit-mask-image: radial-gradient(
+    ellipse 74% 72% at center,
+    #000 42%,
+    rgba(0, 0, 0, 0.78) 64%,
+    transparent 88%
+  );
+  mask-image: radial-gradient(
+    ellipse 74% 72% at center,
+    #000 42%,
+    rgba(0, 0, 0, 0.78) 64%,
+    transparent 88%
+  );
+}
+
+.auth-story-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Dark Mode: avoid muddy multiply blending */
+.dark .auth-story-image,
+.dark .auth-story-image img {
+  mix-blend-mode: normal;
+}
+
+/* Handwritten headline */
+.auth-handwriting {
+  font-family: "Kalam", cursive;
+  font-size: clamp(2rem, 3.2vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.35;
+  color: #386c47;
+}
+
+.dark .auth-handwriting {
+  color: #a1d5ae;
+}
+
+.auth-handwriting span {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  max-width: 100%;
+  vertical-align: bottom;
+  animation: auth-write 5s steps(27, end) infinite;
+}
+
+/* Handwritten subtitle */
+.auth-handwriting-subtitle {
+  font-family: "Kalam", cursive;
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
+  line-height: 1.5;
+  color: #656a65;
+  animation: auth-subtitle-appear 5s ease-in-out infinite;
+}
+
+.dark .auth-handwriting-subtitle {
+  color: #c1cec4;
+}
+
+/* Typing animation */
+@keyframes auth-write {
+  0% {
+    width: 0;
+  }
+
+  55%,
+  90% {
+    width: 100%;
+  }
+
+  100% {
+    width: 0;
+  }
+}
+
+/* Subtitle fade animation */
+@keyframes auth-subtitle-appear {
+  0%,
+  40% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  60%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Mobile: prevent handwritten text overflow */
+@media (max-width: 480px) {
+  .auth-handwriting span {
+    white-space: normal;
+    width: auto;
+    animation: auth-subtitle-appear 5s ease-in-out infinite;
+  }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .auth-story-image,
+  .auth-story-image img {
+    mix-blend-mode: normal;
+  }
+
+  .auth-handwriting span {
+    width: auto;
+    animation: none;
+  }
+
+  .auth-handwriting-subtitle {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+/* Desktop viewport layout */
+@media (min-width: 1024px) {
+  .auth-page {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .auth-page-content {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .auth-story-panel,
+  .auth-form-panel {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .auth-story-panel {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .auth-story-panel .auth-story-image {
+    width: 100%;
+    max-width: 520px;
+    max-height: 52vh;
+    max-height: 52dvh;
+    margin-inline: auto;
+  }
+
+  .auth-story-image img {
+    max-height: 52vh;
+    max-height: 52dvh;
+    object-fit: contain;
+  }
+
+  .auth-form-panel {
+    overflow-y: auto;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+}
+
+/* Mobile and tablet scrolling */
+@media (max-width: 1023px) {
+  .auth-page,
+  .auth-page-content {
+    height: auto;
+    min-height: 100vh;
+  }
+}

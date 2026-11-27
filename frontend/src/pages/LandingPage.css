@@ -1,0 +1,270 @@
+
+/* ==========================================
+   LEDGERSPLIT — LANDING PAGE THEME
+   Sage-green handwriting in Light & Dark Mode
+   ========================================== */
+
+/* Dark page background */
+.dark .landing-root {
+  background-color: #141715;
+  color: #edf3ed;
+}
+
+/* Keep animated background visible */
+.dark .landing-root .landing-ambient {
+  background: transparent;
+}
+
+/* LIGHT MODE — Deep sage-green handwriting */
+.landing-root .hero-handwriting,
+.landing-root .section-handwriting {
+  color: #386c47;
+}
+
+/* LIGHT MODE — Typing cursor */
+.landing-root .hero-handwriting-text,
+.landing-root .section-handwriting-text {
+  border-right-color: #386c47;
+}
+
+/* DARK MODE — Soft sage-green handwriting */
+.dark .landing-root .hero-handwriting,
+.dark .landing-root .section-handwriting {
+  color: #a4d6ae;
+}
+
+/* DARK MODE — Typing cursor */
+.dark .landing-root .hero-handwriting-text,
+.dark .landing-root .section-handwriting-text {
+  border-right-color: #a4d6ae;
+}
+
+/* Accessibility: disable animation when requested */
+@media (prefers-reduced-motion: reduce) {
+  .landing-root .hero-handwriting-text,
+  .landing-root .section-handwriting-text {
+    animation: none;
+    border-right: none;
+  }
+}
+
+/* ==========================================
+   LEDGERSPLIT — LANDING PAGE THEME
+   Sage-green handwriting in Light & Dark Mode
+   ========================================== */
+
+/* Dark page background */
+.dark .landing-root {
+  background-color: #141715;
+  color: #edf3ed;
+}
+
+/* Keep animated background visible */
+.dark .landing-root .landing-ambient {
+  background: transparent;
+}
+
+/* LIGHT MODE — Deep sage-green handwriting */
+.landing-root .hero-handwriting,
+.landing-root .section-handwriting {
+  color: #386c47;
+}
+
+/* LIGHT MODE — Typing cursor */
+.landing-root .hero-handwriting-text,
+.landing-root .section-handwriting-text {
+  border-right-color: #386c47;
+}
+
+/* DARK MODE — Soft sage-green handwriting */
+.dark .landing-root .hero-handwriting,
+.dark .landing-root .section-handwriting {
+  color: #a4d6ae;
+}
+
+/* DARK MODE — Typing cursor */
+.dark .landing-root .hero-handwriting-text,
+.dark .landing-root .section-handwriting-text {
+  border-right-color: #a4d6ae;
+}
+
+/* Accessibility: disable animation when requested */
+@media (prefers-reduced-motion: reduce) {
+  .landing-root .hero-handwriting-text,
+  .landing-root .section-handwriting-text {
+    animation: none;
+    border-right: none;
+  }
+}
+
+.landing-root .hero-handwriting,
+.landing-root .section-handwriting {
+  font-family: "Kalam", cursive;
+  font-weight: 700;
+  color: #386c47;
+}
+
+.dark .landing-root .hero-handwriting,
+.dark .landing-root .section-handwriting {
+  color: #a4d6ae;
+}
+
+/* Hero handwriting animation */
+.landing-root .hero-handwriting-text {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  max-width: 100%;
+  vertical-align: bottom;
+  border-right: 2px solid currentColor;
+  animation: landing-write 5s steps(24, end) infinite;
+}
+
+/* Section handwriting animation */
+.landing-root .section-handwriting-text {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  max-width: 100%;
+  vertical-align: bottom;
+  border-right: 2px solid currentColor;
+  animation: landing-write 5s steps(24, end) infinite;
+}
+
+@keyframes landing-write {
+  0% {
+    width: 0;
+  }
+
+  55%,
+  90% {
+    width: 100%;
+  }
+
+  100% {
+    width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-root .hero-handwriting-text,
+  .landing-root .section-handwriting-text {
+    width: auto;
+    animation: none;
+    border-right: none;
+  }
+}
+
+/* ==========================================
+   LANDING HANDWRITING — SIZE & LAYOUT FIX
+   ========================================== */
+
+/* Handwritten typography */
+.landing-root .hero-handwriting,
+.landing-root .section-handwriting {
+  font-family: "Kalam", cursive;
+  font-weight: 700;
+  color: #386c47;
+}
+
+.dark .landing-root .hero-handwriting,
+.dark .landing-root .section-handwriting {
+  color: #a4d6ae;
+}
+
+/* Hero: smaller and more balanced */
+.landing-root .hero-handwriting {
+  font-size: 0.82em;
+  line-height: 1.35;
+}
+
+/* Section headings: smaller than main title */
+.landing-root .section-handwriting {
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+/* Keep measurement text invisible */
+.landing-root .section-handwriting-measure {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.landing-root .section-handwriting-sizer {
+  visibility: hidden;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Animate only the visible handwriting */
+.landing-root .section-handwriting-text {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-block;
+  width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid currentColor;
+  animation: landing-handwriting-reveal 5s steps(28, end) infinite;
+}
+
+/* Hero typing animation */
+.landing-root .hero-handwriting-text {
+  display: inline-block;
+  width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid currentColor;
+  vertical-align: bottom;
+  animation: landing-handwriting-reveal 5s steps(28, end) infinite;
+}
+
+@keyframes landing-handwriting-reveal {
+  0% {
+    width: 0;
+  }
+
+  55%,
+  90% {
+    width: 100%;
+  }
+
+  100% {
+    width: 0;
+  }
+}
+
+/* Mobile: avoid text overflow */
+@media (max-width: 640px) {
+  .landing-root .hero-handwriting,
+  .landing-root .section-handwriting {
+    font-size: 0.75em;
+  }
+
+  .landing-root .hero-handwriting-text,
+  .landing-root .section-handwriting-text,
+  .landing-root .section-handwriting-sizer {
+    white-space: normal;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .landing-root .hero-handwriting-text,
+  .landing-root .section-handwriting-text {
+    position: static;
+    width: auto;
+    animation: none;
+    border-right: none;
+  }
+
+  .landing-root .section-handwriting-sizer {
+    display: none;
+  }
+}

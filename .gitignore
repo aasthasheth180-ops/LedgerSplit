@@ -1,11 +1,43 @@
-@"
+@'
+# Python
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environment and secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+
+# Frontend
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# Editors
 .vscode/
 .idea/
-"@ | Set-Content .gitignore
+
+# Database and logs
+*.sql
+*.dump
+*.sqlite
+*.sqlite3
+*.log
+
+# Generated API specification
+/openapi.json
+
+# Operating system
+.DS_Store
+Thumbs.db
+'@ | Set-Content .gitignore

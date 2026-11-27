@@ -76,7 +76,12 @@ def client(db_session):
     app.dependency_overrides[get_db] = override_get_db
 
     try:
-        with TestClient(app) as test_client:
+        with TestClient(
+            app,
+            headers={
+                "Origin": settings.TRUSTED_ORIGINS[0],
+            },
+        ) as test_client:
             yield test_client
     finally:
         app.dependency_overrides.pop(get_db, None)

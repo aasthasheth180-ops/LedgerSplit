@@ -4,3 +4,8 @@ from app.models.group_member import GroupMember
 from app.models.expense import Expense
 from app.models.expense_split import ExpenseSplit
 from app.models.payment import Payment
+from app.models.auth_session import AuthSession
+from app.models.refresh_token import RefreshToken
+from app.models.oauth_identity import OAuthIdentity
+from app.models.google_auth_challenge import GoogleAuthChallenge
+from app.models.payment_request import PaymentRequest

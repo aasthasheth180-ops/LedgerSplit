@@ -49,6 +49,10 @@ def create_group_expense(
         paid_by=expense.paid_by,
         description=expense.description,
         amount=expense.amount,
+        category=expense.category,
+        expense_date=expense.expense_date,
+        reference=expense.reference,
+        split_method=expense.split_method,
         created_at=expense.created_at,
         splits=splits,
     )
@@ -77,6 +81,10 @@ def list_group_expenses(
             paid_by=expense.paid_by,
             description=expense.description,
             amount=expense.amount,
+            category=expense.category,
+            expense_date=expense.expense_date,
+            reference=expense.reference,
+            split_method=expense.split_method,
             created_at=expense.created_at,
             splits=splits,
         )
@@ -108,6 +116,10 @@ def retrieve_expense_details(
         paid_by=expense.paid_by,
         description=expense.description,
         amount=expense.amount,
+        category=expense.category,
+        expense_date=expense.expense_date,
+        reference=expense.reference,
+        split_method=expense.split_method,
         created_at=expense.created_at,
         splits=splits,
     )
