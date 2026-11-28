@@ -1,4 +1,3 @@
-
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -19,29 +18,28 @@ from app.db.database import Base
 
 class Expense(Base):
     __tablename__ = "expenses"
+
     __table_args__ = (
-    CheckConstraint(
-        "amount > 0",
-        name="ck_expenses_positive_amount",
-    ),
-    UniqueConstraint(
-        "group_id",
-        "paid_by",
-        "idempotency_key",
-        name="uq_expenses_group_payer_idempotency",
-    ),
-
-
-    CheckConstraint(
-        "category IN ('Groceries', 'Dining', 'Home', "
-        "'Utilities', 'Travel', 'Rent', 'Other')",
-        name="ck_expenses_valid_category",
-    ),
-    CheckConstraint(
-        "split_method IN ('Equal', 'Exact', 'Percent')",
-        name="ck_expenses_valid_split_method",
-    ),
-)
+        CheckConstraint(
+            "amount > 0",
+            name="ck_expenses_positive_amount",
+        ),
+        UniqueConstraint(
+            "group_id",
+            "paid_by",
+            "idempotency_key",
+            name="uq_expenses_group_payer_idempotency",
+        ),
+        CheckConstraint(
+            "category IN ('Groceries', 'Dining', 'Home', "
+            "'Utilities', 'Travel', 'Rent', 'Other')",
+            name="ck_expenses_valid_category",
+        ),
+        CheckConstraint(
+            "split_method IN ('Equal', 'Exact', 'Percent')",
+            name="ck_expenses_valid_split_method",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -68,7 +66,6 @@ class Expense(Base):
         nullable=False,
     )
 
-
     category: Mapped[str] = mapped_column(
         String(30),
         default="Other",
@@ -94,12 +91,17 @@ class Expense(Base):
     )
 
     idempotency_key: Mapped[str | None] = mapped_column(
-    String(128),
-    nullable=True,
-)
+        String(128),
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    voided_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )

@@ -18,7 +18,8 @@ class Group(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "created_by", "idempotency_key",
+            "created_by",
+            "idempotency_key",
             name="uq_groups_creator_idempotency",
         ),
         CheckConstraint(
@@ -95,15 +96,27 @@ class Group(Base):
     )
 
     idempotency_key: Mapped[str | None] = mapped_column(
-        String(128), nullable=True,
+        String(128),
+        nullable=True,
     )
 
     request_fingerprint: Mapped[str | None] = mapped_column(
-        String(64), nullable=True,
+        String(64),
+        nullable=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
