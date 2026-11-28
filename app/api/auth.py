@@ -268,7 +268,7 @@ def issue_google_challenge(
         httponly=True,
         secure=settings.REFRESH_COOKIE_SECURE,
         samesite="lax",
-        path="/auth/google",
+        path=f"{settings.REFRESH_COOKIE_PATH}/google",
         max_age=CHALLENGE_TTL_SECONDS,
     )
 
