@@ -29,7 +29,6 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-
   const { logout, isLoggingOut } = useAuth();
   const [logoutError, setLogoutError] = useState("");
 
@@ -135,7 +134,7 @@ export default function AppSidebar({
             </nav>
           </div>
 
-          {/* Bottom Logout */}
+          {/* Bottom group information and Logout */}
           <div className="mt-auto p-3">
 
             {/* Logout button */}

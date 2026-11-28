@@ -9,6 +9,7 @@ from app.models.payment_request import PaymentRequest
 from app.schemas.payment_request import PaymentRequestCreate
 from app.services.group_service import lock_group, get_membership
 from app.services.ledger_service import calculate_group_balances
+from app.services.notification_service import notify
 
 
 def create_payment_request(
@@ -132,6 +133,7 @@ def create_payment_request(
         db.add(payment_request)
         db.flush()
         db.refresh(payment_request)
+        notify(db, payment_request.debtor_id, f"request-{payment_request.status}:{payment_request.id}", f"Payment request #{payment_request.id}: {payment_request.status}.")
         db.commit()
 
         return payment_request
@@ -211,6 +213,7 @@ def cancel_payment_request(
 
         db.flush()
         db.refresh(payment_request)
+        notify(db, payment_request.debtor_id, f"request-{payment_request.status}:{payment_request.id}", f"Payment request #{payment_request.id}: {payment_request.status}.")
         db.commit()
 
         return payment_request

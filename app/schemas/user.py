@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Literal
+from pydantic import field_validator
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -32,3 +34,24 @@ class GoogleLogin(BaseModel):
     )
     remember_me: bool = False
     accepted_terms: bool = False
+
+class ProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    full_name: str = Field(min_length=1, max_length=100)
+
+    @field_validator("full_name", mode="before")
+    @classmethod
+    def strip_name(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+
+class Preferences(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    preferred_currency: Literal["USD", "EUR", "GBP", "CAD", "JPY", "INR"]
+    reminders_enabled: bool
+
+
+class PasswordChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=12, max_length=128)

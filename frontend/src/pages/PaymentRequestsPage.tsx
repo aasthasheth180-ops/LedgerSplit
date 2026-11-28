@@ -55,7 +55,54 @@ export default function PaymentRequestsPage() {
  const pending = visible.filter(r=>r.status === "pending");
  const fulfilled = visible.filter(r=>r.status === "fulfilled");
  const cancelled = visible.filter(r=>r.status === "cancelled");
- async function cancel(groupId:number,id:number) {
+
+  function reminderStatus(r: (typeof rows)[number]): string {
+    const currency = r.group.currency;
+
+    const remaining =
+      parseMinor(r.amount, currency) -
+      parseMinor(r.fulfilled_amount, currency);
+
+    const creditorBalance = parseMinor(
+      r.group.balances.find(b => b.user_id === r.requester_id)
+        ?.net_balance ?? "0",
+      currency
+    );
+
+    const debtorBalance = parseMinor(
+      r.group.balances.find(b => b.user_id === r.debtor_id)
+        ?.net_balance ?? "0",
+      currency
+    );
+
+    const outstanding = Math.min(
+      remaining,
+      creditorBalance,
+      -debtorBalance
+    );
+
+    const reported = r.group.payments
+      .filter(p =>
+        p.status === "pending" &&
+        p.from_user_id === r.debtor_id &&
+        p.to_user_id === r.requester_id
+      )
+      .reduce((sum, p) =>
+        sum + parseMinor(p.amount, currency), 0
+      );
+
+    if (reported > 0 && reported >= outstanding) {
+      return "Awaiting confirmation · 48h reminders if enabled";
+    }
+
+    if (outstanding <= 0) {
+      return "No outstanding balance";
+    }
+
+    return "Outstanding request · 48h reminders if enabled";
+  }
+
+  async function cancel(groupId:number,id:number) {
    if (!window.confirm("Cancel this payment request?")) return;
    if (!submission.beginSubmission()) return;
    setMessage("");
@@ -126,7 +173,7 @@ export default function PaymentRequestsPage() {
             <div className="mt-6 flex h-4 overflow-hidden rounded-full bg-[#eef3ef] dark:bg-[#304236]">{[pending,fulfilled,cancelled].map((items,i)=><div key={i} style={{width:`${items.length/Math.max(1,visible.length)*100}%`,backgroundColor:["#dc9a45","#4a7856","#d97862"][i]}}/>)}</div>
             <p className="mt-4 text-sm">{pending.length} Pending · {fulfilled.length} Fulfilled · {cancelled.length} Cancelled</p>
           </div>
-          <div className="rounded-2xl border border-[#e8e6e1] bg-white/95 p-6 dark:border-[#35483b] dark:bg-[#1b201d]"><h2 className="text-lg font-bold">Request delivery</h2><p className="mt-2 text-sm">Requests are visible in LedgerSplit. Email, SMS and automatic reminders are not enabled.</p></div>
+          <div className="rounded-2xl border border-[#e8e6e1] bg-white/95 p-6 dark:border-[#35483b] dark:bg-[#1b201d]"><h2 className="text-lg font-bold">Request delivery</h2><p className="mt-2 text-sm">Requests are visible in LedgerSplit. Automatic in-app reminders run every 48 hours for eligible outstanding requests and unconfirmed payments, subject to the recipient’s reminder preference. Email and SMS are not supported.</p></div>
         </section>
         <section className="overflow-hidden rounded-2xl border border-[#e8e6e1] bg-white/95 dark:border-[#35483b] dark:bg-[#1b201d]">
           <div className="flex flex-wrap items-center gap-3 p-5"><h2 className="mr-auto text-lg font-bold">Settlement Activity</h2>
@@ -134,7 +181,7 @@ export default function PaymentRequestsPage() {
           <select aria-label="Request status" className={field} value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All statuses</option><option value="pending">Pending</option><option value="fulfilled">Fulfilled</option><option value="cancelled">Cancelled</option></select>
           <select aria-label="Request date" className={field} value={dateFilter} onChange={e=>setDateFilter(e.target.value)}><option value="all">All time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select>
           <select aria-label="Request group" className={field} value={groupFilter} onChange={e=>setGroupFilter(e.target.value)}><option value="all">All groups</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[950px] text-left text-sm"><thead className="bg-[#f7f8f6] dark:bg-[#232b25]"><tr>{["Member","Description","Group","Requested","Fulfilled","Remaining","Due date","Status","Action"].map(h=><th key={h} className="p-4">{h}</th>)}</tr></thead><tbody className="divide-y divide-[#eef0ec] dark:divide-[#35483b]">{visible.map(r=><tr key={`${r.group_id}:${r.id}`}><td className="p-4 font-semibold">{r.person}<p className="text-xs font-normal">{r.outgoing?"Outgoing":"Incoming"}</p></td><td className="p-4">{r.description || "Settlement request"}<p className="text-xs">#{r.id} · {new Date(r.created_at).toLocaleDateString()}</p></td><td className="p-4">{r.group.name}</td><td className="p-4">{formatMoney(r.amount,r.group.currency)}</td><td className="p-4">{formatMoney(r.fulfilled_amount,r.group.currency)}</td><td className="p-4">{r.status === "cancelled" ? "—" : formatMoney(minorToDecimal(parseMinor(r.amount,r.group.currency)-parseMinor(r.fulfilled_amount,r.group.currency),r.group.currency),r.group.currency)}</td><td className="p-4">{r.due_date ?? "—"}</td><td className="p-4 capitalize">{r.status}</td><td className="p-4">{r.status === "pending" && (r.outgoing ? <button type="button" disabled={submission.isLoading} className="font-semibold text-red-700 dark:text-red-300 disabled:opacity-50" onClick={()=>void cancel(r.group_id,r.id)}>Cancel request</button> : <button type="button" className="font-semibold text-[#4a7856] dark:text-[#a1d5ad]" onClick={()=>navigate("/balances")}>View balances</button>)}</td></tr>)}</tbody></table>{!visible.length && <p className="p-10 text-center">No requests match your filters.</p>}</div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[950px] text-left text-sm"><thead className="bg-[#f7f8f6] dark:bg-[#232b25]"><tr>{["Member","Description","Group","Requested","Fulfilled","Remaining","Due date","Status","Action"].map(h=><th key={h} className="p-4">{h}</th>)}</tr></thead><tbody className="divide-y divide-[#eef0ec] dark:divide-[#35483b]">{visible.map(r=><tr key={`${r.group_id}:${r.id}`}><td className="p-4 font-semibold">{r.person}<p className="text-xs font-normal">{r.outgoing?"Outgoing":"Incoming"}</p></td><td className="p-4">{r.description || "Settlement request"}<p className="text-xs">#{r.id} · {new Date(r.created_at).toLocaleDateString()}</p></td><td className="p-4">{r.group.name}</td><td className="p-4">{formatMoney(r.amount,r.group.currency)}</td><td className="p-4">{formatMoney(r.fulfilled_amount,r.group.currency)}</td><td className="p-4">{r.status === "cancelled" ? "—" : formatMoney(minorToDecimal(parseMinor(r.amount,r.group.currency)-parseMinor(r.fulfilled_amount,r.group.currency),r.group.currency),r.group.currency)}</td><td className="p-4">{r.due_date ?? "—"}</td><td className="p-4"><span className="capitalize">{r.status}</span>{r.status === "pending" && <p className="mt-1 text-xs text-[#4a7856] dark:text-[#a1d5ad]">{reminderStatus(r)}</p>}</td><td className="p-4">{r.status === "pending" && (r.outgoing ? <button type="button" disabled={submission.isLoading} className="font-semibold text-red-700 dark:text-red-300 disabled:opacity-50" onClick={()=>void cancel(r.group_id,r.id)}>Cancel request</button> : <button type="button" className="font-semibold text-[#4a7856] dark:text-[#a1d5ad]" onClick={()=>navigate("/balances")}>View balances</button>)}</td></tr>)}</tbody></table>{!visible.length && <p className="p-10 text-center">No requests match your filters.</p>}</div>
         </section></>}
       </main></div>);
 }

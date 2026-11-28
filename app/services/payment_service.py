@@ -12,6 +12,7 @@ from app.schemas.payment import PaymentCreate
 
 from app.services.ledger_service import calculate_group_balances
 from app.services.payment_request_service import reconcile_payment_request
+from app.services.notification_service import notify
 
 def create_payment(
     db: Session,
@@ -115,6 +116,9 @@ def create_payment(
 
         db.add(payment)
         db.flush()
+        notify(db, payment.to_user_id, f"payment-reported:{payment.id}", f"Payment #{payment.id} was reported. Please confirm receipt.")
+        if payment.status in ("confirmed", "rejected"):
+            notify(db, payment.from_user_id, f"payment-{payment.status}:{payment.id}", f"Payment #{payment.id} was {payment.status}.")
         db.commit()
 
         return payment
@@ -255,6 +259,8 @@ def confirm_payment(
             amount=payment.amount,
         )
 
+        if payment.status in ("confirmed", "rejected"):
+            notify(db, payment.from_user_id, f"payment-{payment.status}:{payment.id}", f"Payment #{payment.id} was {payment.status}.")
         db.commit()
 
         return payment
@@ -342,6 +348,8 @@ def reject_payment(
         payment.status = updated.status
         payment.confirmed_at = updated.confirmed_at
 
+        if payment.status in ("confirmed", "rejected"):
+            notify(db, payment.from_user_id, f"payment-{payment.status}:{payment.id}", f"Payment #{payment.id} was {payment.status}.")
         db.commit()
 
         return payment

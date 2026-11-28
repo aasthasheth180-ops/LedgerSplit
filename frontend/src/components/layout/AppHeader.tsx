@@ -1,3 +1,4 @@
+import AccountHeader from "./AccountHeader";
 
 import { Link } from "react-router-dom";
 
@@ -54,19 +55,7 @@ export default function AppHeader({
           />
         </div>
 
-        {/* Currency */}
-        <span className="ml-auto rounded-full border border-[#dce7db] bg-white px-3 py-1.5 text-xs font-semibold text-[#263c2d] transition-colors dark:border-[#35483b] dark:bg-[#232b25] dark:text-[#e4eee6]">
-          $ USD
-        </span>
-
-        {/* Demo profile */}
-        <span
-          className="rounded-full bg-[#e7f0e6] px-3 py-2 text-xs font-semibold text-[#456d50] transition-colors dark:bg-[#304236] dark:text-[#c4e4ca]"
-          aria-label="Demo profile"
-        >
-          ER
-        </span>
-
+        <AccountHeader />
       </div>
     </header>
   );

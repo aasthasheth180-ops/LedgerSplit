@@ -14,7 +14,7 @@ def authenticate_user(
     normalized_email = email.strip().lower()
 
     user = db.scalar(
-        select(User).where(User.email == normalized_email)
+        select(User).where(User.email == normalized_email).with_for_update().execution_options(populate_existing=True)
     )
 
     if user is None:

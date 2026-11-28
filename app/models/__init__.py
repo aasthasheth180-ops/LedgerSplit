@@ -9,3 +9,4 @@ from app.models.refresh_token import RefreshToken
 from app.models.oauth_identity import OAuthIdentity
 from app.models.google_auth_challenge import GoogleAuthChallenge
 from app.models.payment_request import PaymentRequest
+from app.models.notification import Notification

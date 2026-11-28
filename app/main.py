@@ -34,6 +34,8 @@ app.include_router(balances_router)
 app.include_router(settlements_router)
 app.include_router(payments_router)
 app.include_router(payment_requests_router)
+from app.api.notifications import router as notifications_router
+app.include_router(notifications_router)
 
 @app.get("/")
 def root():
