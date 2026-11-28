@@ -1,0 +1,57 @@
+x-backend: &backend
+  build: .
+  environment:
+    APP_ENV: development
+    DATABASE_URL: postgresql+psycopg://ledger:${POSTGRES_PASSWORD:?required}@db:5432/ledger
+    JWT_SECRET_KEY: ${DOCKER_JWT_SECRET:?required}
+    TRUSTED_ORIGINS: http://localhost:8080
+    GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ledger
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ledger
+    volumes:
+      - ledger_data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U ledger -d ledger']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  migrate:
+    <<: *backend
+    command: [alembic, upgrade, head]
+    depends_on:
+      db:
+        condition: service_healthy
+  backend:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    <<: *backend
+    command: [python, -m, app.reminder_worker]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+  frontend:
+    build:
+      context: frontend
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    ports:
+      - '127.0.0.1:8080:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+volumes:
+  ledger_data:

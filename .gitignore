@@ -1,4 +1,3 @@
-@'
 # Python
 .venv/
 venv/
@@ -40,4 +39,9 @@ coverage/
 # Operating system
 .DS_Store
 Thumbs.db
-'@ | Set-Content .gitignore
+
+ledgersplit_backend_complete.py
+ledgersplit_production_batch.py
+
+ledgersplit_backend_complete.py
+ledgersplit_production_batch.py

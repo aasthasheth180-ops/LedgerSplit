@@ -17,6 +17,14 @@ app = FastAPI(
     version=settings.APP_VERSION,
 )
 
+from app.core.observability import install_observability
+
+install_observability(app)
+
+from app.core.observability import install_observability
+
+install_observability(app)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.TRUSTED_ORIGINS,
