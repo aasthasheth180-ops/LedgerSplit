@@ -44,17 +44,6 @@ class Settings:
             if not self.DATABASE_URL:
                 raise ValueError("Production requires DATABASE_URL")
 
-        if self.JWT_ALGORITHM != "HS256":
-            raise ValueError("JWT_ALGORITHM must be HS256")
-        if self.APP_ENV.lower() == "production":
-            secret = self.JWT_SECRET_KEY or ""
-            if len(secret) < 32 or len(set(secret)) < 12 or secret == "replace-with-a-long-random-secret":
-                raise ValueError("Production requires a strong JWT secret")
-            if not 1 <= self.ACCESS_TOKEN_EXPIRE_MINUTES <= 60:
-                raise ValueError("Production access tokens must expire within 60 minutes")
-            if not self.DATABASE_URL:
-                raise ValueError("Production requires DATABASE_URL")
-
         # Refresh-token session configuration
         self.REFRESH_COOKIE_NAME = "ledgersplit_refresh"
 
@@ -118,8 +107,6 @@ class Settings:
                 )
 
             _ = parsed.port
-            if self.APP_ENV.lower() == "production" and parsed.scheme != "https":
-                raise ValueError("Production trusted origins must use HTTPS")
             if self.APP_ENV.lower() == "production" and parsed.scheme != "https":
                 raise ValueError("Production trusted origins must use HTTPS")
 
