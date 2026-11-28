@@ -24,6 +24,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
 
         {/* LEFT: Illustrated story */}
         <section className="auth-story-panel flex w-full flex-col justify-between border-b border-[#e8e6e1]/70 bg-white/10 px-6 py-8 dark:border-[#35483b] dark:bg-[#1b201d]/40 lg:min-h-screen lg:w-1/2 lg:border-b-0 lg:border-r lg:px-10 lg:py-10">
+
           {/* Logo */}
           <Link
             to="/"
@@ -43,8 +44,10 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
 
             <div className="auth-story-image w-full max-w-[560px]">
               <img
-                src="/animations/ledgersplit-friends-story.gif"
+                src="/animations/ledgersplit-friends-story.webp"
                 alt="Four friends discovering an easier way to split expenses"
+                width={508}
+                height={508}
                 className="block h-auto w-full rounded-2xl"
               />
             </div>
@@ -57,6 +60,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
               <h2 className="auth-handwriting mt-4">
                 <span>From confusion to clarity.</span>
               </h2>
+
               <p className="auth-handwriting-subtitle mt-3 text-[#656a65] dark:text-[#c1cec4]">
                 Less calculating. More memories.
               </p>

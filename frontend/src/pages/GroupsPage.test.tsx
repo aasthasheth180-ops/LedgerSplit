@@ -75,3 +75,149 @@ describe("Groups integration", () => {
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Network unavailable"));
   });
 });
+
+
+
+describe("Group lifecycle integration", () => {
+  it("filters active, archived and all groups", async () => {
+    setup();
+
+    const archivedGroup = {
+      ...group,
+      id: 8,
+      name: "Archived Research",
+      archived_at: group.created_at,
+    };
+
+    await screen.findByRole("heading", {
+      name: "ResearchMates",
+    });
+
+    const base = request.getMockImplementation()!;
+
+    request.mockImplementation(
+      async (path: string, options?: RequestInit) => {
+        if (path === "/groups") {
+          return [group, archivedGroup];
+        }
+
+        return base(
+          path.replace(/^\/groups\/8\//, "/groups/7/"),
+          options
+        );
+      }
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Refresh" })
+    );
+
+    await screen.findByRole("button", {
+      name: "Archived (1)",
+    });
+
+    expect(
+      screen.queryByRole("heading", {
+        name: "Archived Research",
+      })
+    ).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Archived (1)" })
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Archived Research",
+      })
+    ).toBeTruthy();
+
+    expect(
+      screen.queryByRole("heading", {
+        name: "ResearchMates",
+      })
+    ).toBeNull();
+
+    expect(
+      screen.getByText("Archived · Read-only history")
+    ).toBeTruthy();
+
+    expect(
+      screen.queryByRole("button", { name: "Archive Group" })
+    ).toBeNull();
+
+    expect(
+      screen.queryByRole("button", { name: "Delete Group" })
+    ).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "View Members" })
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Add Member" })
+    ).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "All Groups (2)" })
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "ResearchMates" })
+    ).toBeTruthy();
+
+    expect(
+      screen.getByRole("heading", { name: "Archived Research" })
+    ).toBeTruthy();
+  });
+
+  it("shows lifecycle controls to the owner", async () => {
+    setup();
+
+    await screen.findByRole("heading", {
+      name: "ResearchMates",
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Archive Group" })
+    ).toBeTruthy();
+
+    expect(
+      screen.getByRole("button", { name: "Delete Group" })
+    ).toBeTruthy();
+  });
+
+  it("hides lifecycle controls from regular members", async () => {
+    setup(2);
+
+    await screen.findByRole("heading", {
+      name: "ResearchMates",
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Archive Group" })
+    ).toBeNull();
+
+    expect(
+      screen.queryByRole("button", { name: "Delete Group" })
+    ).toBeNull();
+  });
+
+  it("shows an empty archived group view", async () => {
+    setup();
+
+    await screen.findByRole("heading", {
+      name: "ResearchMates",
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Archived (0)" })
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "No archived groups",
+      })
+    ).toBeTruthy();
+  });
+});
