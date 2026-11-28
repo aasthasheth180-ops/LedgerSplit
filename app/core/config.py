@@ -51,7 +51,7 @@ class Settings:
 
         self.REFRESH_COOKIE_SAMESITE = "lax"
 
-        self.REFRESH_COOKIE_PATH = "/auth"
+        self.REFRESH_COOKIE_PATH = os.getenv( "REFRESH_COOKIE_PATH", "/auth")
 
         self.SESSION_EXPIRE_DAYS = int(
             os.getenv("SESSION_EXPIRE_DAYS", "7")
