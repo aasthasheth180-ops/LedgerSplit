@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
+from app.services.authentication_services import authenticate_user
 from app.models.oauth_identity import OAuthIdentity
 from app.models.user import User
 from app.services.google_auth_service import GoogleIdentity
@@ -16,6 +16,9 @@ class InactiveAccountError(Exception):
 
 
 class TermsAcceptanceRequiredError(Exception):
+    pass
+
+class InvalidLinkPasswordError(Exception):
     pass
 
 
@@ -112,5 +115,52 @@ def get_or_create_google_user(
         raise
 
     db.refresh(user)
+
+    return user
+
+def link_google_account(
+    db: Session,
+    identity: GoogleIdentity,
+    password: str,
+) -> User:
+
+    user = authenticate_user(
+        db=db,
+        email=identity.email,
+        password=password,
+    )
+
+    if user is None:
+        db.rollback()
+        raise InvalidLinkPasswordError()
+
+    existing_identity = db.scalar(
+        select(OAuthIdentity).where(
+            OAuthIdentity.user_id == user.id,
+            OAuthIdentity.provider == "google",
+        )
+    )
+
+    if existing_identity is not None:
+        if existing_identity.provider_subject != identity.subject:
+            db.rollback()
+            raise AccountLinkRequiredError()
+
+        return user
+
+    try:
+        db.add(
+            OAuthIdentity(
+                user_id=user.id,
+                provider="google",
+                provider_subject=identity.subject,
+            )
+        )
+
+        db.flush()
+
+    except IntegrityError:
+        db.rollback()
+        raise AccountLinkRequiredError()
 
     return user

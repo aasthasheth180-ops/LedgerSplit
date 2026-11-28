@@ -34,7 +34,9 @@ from app.services.google_auth_service import (
 
 from app.services.oauth_account_service import (
     get_or_create_google_user,
+    link_google_account,
     AccountLinkRequiredError,
+    InvalidLinkPasswordError,
     InactiveAccountError,
     TermsAcceptanceRequiredError,
 )
@@ -164,11 +166,18 @@ def google_login(
             browser_token=browser_token,
         )
 
-        user = get_or_create_google_user(
-            db=db,
-            identity=identity,
-            accepted_terms=credentials.accepted_terms,
-        )
+        if credentials.link_password is not None:
+            user = link_google_account(
+                db=db,
+                identity=identity,
+                password=credentials.link_password,
+            )
+        else:
+            user = get_or_create_google_user(
+                db=db,
+                identity=identity,
+                accepted_terms=credentials.accepted_terms,
+            )
 
     except InvalidGoogleChallengeError:
         raise HTTPException(
@@ -189,6 +198,12 @@ def google_login(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Google authentication is temporarily unavailable",
+        )
+
+    except InvalidLinkPasswordError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect LedgerSplit password. Account linking failed.",
         )
     except AccountLinkRequiredError:
         raise HTTPException(

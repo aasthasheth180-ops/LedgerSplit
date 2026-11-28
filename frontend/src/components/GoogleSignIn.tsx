@@ -10,6 +10,7 @@ import { apiRequest } from "../lib/api";
 import { withAuthLock } from "../lib/authSession";
 
 type GoogleSignInProps = {
+  linkPassword?: string;
   rememberMe: boolean;
   acceptedTerms?: boolean;
   disabled?: boolean;
@@ -31,6 +32,7 @@ type GoogleChallengeResponse = {
 
 export default function GoogleSignIn({
   rememberMe,
+  linkPassword,
   acceptedTerms = false,
   disabled = false,
   beginSubmission,
@@ -145,10 +147,11 @@ export default function GoogleSignIn({
           {
             method: "POST",
             body: JSON.stringify({
-              credential,
-              remember_me: rememberMe,
-              accepted_terms: acceptedTerms,
-            }),
+                  credential,
+                  remember_me: rememberMe,
+                  accepted_terms: acceptedTerms,
+                  ...(linkPassword ? { link_password: linkPassword } : {}),
+                }),
           }
         );
 

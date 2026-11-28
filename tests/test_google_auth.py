@@ -344,3 +344,94 @@ def test_google_only_user_cannot_use_password_login(
     )
 
     assert response.status_code == 401
+
+@pytest.mark.parametrize(
+    "password, expected_status",
+    [
+        ("SecurePassword123!", 200),
+        ("WrongPassword123!", 401),
+    ],
+)
+def test_google_password_account_linking(
+    client,
+    db_session,
+    google_identity,
+    password,
+    expected_status,
+):
+    registration = client.post(
+        "/auth/register",
+        json={
+            "full_name": "Existing User",
+            "email": google_identity.email,
+            "password": "SecurePassword123!",
+        },
+    )
+
+    assert registration.status_code == 201
+    original_user_id = registration.json()["id"]
+
+    challenge = client.post("/auth/google/challenge")
+    assert challenge.status_code == 200
+
+    response = client.post(
+        "/auth/google",
+        json={
+            "credential": challenge.json()["nonce"],
+            "accepted_terms": False,
+            "link_password": password,
+        },
+    )
+
+    assert response.status_code == expected_status
+
+    identity = db_session.scalar(
+        select(OAuthIdentity).where(
+            OAuthIdentity.user_id == original_user_id,
+            OAuthIdentity.provider == "google",
+        )
+    )
+
+    if expected_status == 401:
+        assert identity is None
+        return
+
+    assert identity is not None
+    assert identity.provider_subject == google_identity.subject
+
+    returning_login = google_login(
+        client,
+        accepted_terms=False,
+    )
+
+    assert returning_login.status_code == 200
+
+    profile = client.get(
+        "/users/me",
+        headers={
+            "Authorization": (
+                f"Bearer {returning_login.json()['access_token']}"
+            ),
+        },
+    )
+
+    assert profile.status_code == 200
+    assert profile.json()["id"] == original_user_id
+
+    password_login = client.post(
+        "/auth/login",
+        json={
+            "email": google_identity.email,
+            "password": "SecurePassword123!",
+        },
+    )
+
+    assert password_login.status_code == 200
+
+    user_count = db_session.scalar(
+        select(func.count(User.id)).where(
+            User.email == google_identity.email
+        )
+    )
+
+    assert user_count == 1  

@@ -34,6 +34,11 @@ class GoogleLogin(BaseModel):
     )
     remember_me: bool = False
     accepted_terms: bool = False
+    link_password: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=128,
+    )
 
 class ProfileUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
