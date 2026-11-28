@@ -48,3 +48,13 @@ class PaymentRequestResponse(BaseModel):
     resolved_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
+
+class PaymentRequestUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    description: str | None = Field(max_length=255)
+    due_date: date | None
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def strip_text(cls, value):
+        return (value.strip() or None) if isinstance(value, str) else value

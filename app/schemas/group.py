@@ -134,3 +134,32 @@ class GroupMemberResponse(BaseModel):
     full_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class GroupUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=100)
+    category: GroupCategory
+    custom_category: str | None = Field(
+        default=None,
+        max_length=50,
+    )
+
+    @field_validator("name", "custom_category", mode="before")
+    @classmethod
+    def strip_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def validate_category(self):
+        if self.category == "Other":
+            if not self.custom_category:
+                raise ValueError(
+                    "Custom category is required for Other"
+                )
+        elif self.custom_category is not None:
+            raise ValueError(
+                "Custom category is only allowed for Other"
+            )
+
+        return self

@@ -255,3 +255,25 @@ def reconcile_payment_request(
         payment_request.resolved_at = datetime.now(timezone.utc)
 
     db.flush()
+
+from app.schemas.payment_request import PaymentRequestUpdate
+
+def update_payment_request(db: Session, group_id: int, request_id: int, requester_id: int, payload: PaymentRequestUpdate):
+    try:
+        lock_group(db, group_id)
+        if get_membership(db, group_id, requester_id) is None:
+            raise HTTPException(status_code=403, detail="You are not a member of this group")
+        item = db.scalar(select(PaymentRequest).where(PaymentRequest.id == request_id, PaymentRequest.group_id == group_id))
+        if item is None:
+            raise HTTPException(status_code=404, detail="Payment request not found")
+        if item.requester_id != requester_id:
+            raise HTTPException(status_code=403, detail="Only the requester can edit this request")
+        if item.status != "pending":
+            raise HTTPException(status_code=409, detail="Only pending requests can be edited")
+        item.description = payload.description
+        item.due_date = payload.due_date
+        db.commit()
+        return item
+    except Exception:
+        db.rollback()
+        raise

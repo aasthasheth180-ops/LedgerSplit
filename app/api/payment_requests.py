@@ -81,3 +81,10 @@ def cancel_group_payment_request(
         request_id=request_id,
         requester_id=current_user.id,
     )
+
+from app.schemas.payment_request import PaymentRequestUpdate
+from app.services.payment_request_service import update_payment_request
+
+@router.patch("/{group_id}/payment-requests/{request_id}", response_model=PaymentRequestResponse)
+def edit_payment_request(group_id: int, request_id: int, payload: PaymentRequestUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return update_payment_request(db, group_id, request_id, current_user.id, payload)

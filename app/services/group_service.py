@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
+from app.schemas.group import GroupUpdate
 from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.user import User
@@ -443,6 +443,41 @@ def remove_group_member(
 
         db.delete(member)
         db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+def update_group(
+    db: Session,
+    group_id: int,
+    requester_id: int,
+    payload: GroupUpdate,
+) -> Group:
+
+    try:
+        group = lock_group(db, group_id)
+
+        requester = get_membership(
+            db,
+            group_id,
+            requester_id,
+        )
+
+        if requester is None or requester.role != "owner":
+            raise HTTPException(
+                status_code=403,
+                detail="Only group owners can edit groups",
+            )
+
+        group.name = payload.name
+        group.category = payload.category
+        group.custom_category = payload.custom_category
+
+        db.commit()
+        db.refresh(group)
+
+        return group
 
     except Exception:
         db.rollback()

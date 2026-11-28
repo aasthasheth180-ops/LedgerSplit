@@ -6,7 +6,15 @@ export function currencyDigits(currency: GroupCurrency): number {
 
 // Integer minor units; accepts API decimal strings and user input.
 export function parseMinor(value: string, currency: GroupCurrency): number {
-  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
+  const symbols: Record<GroupCurrency, string[]> = {USD: ['$'], EUR: ['€'], GBP: ['£'], CAD: ['CA$', 'C$', '$'], JPY: ['¥', '￥'], INR: ['₹']};
+  let normalized = value.trim();
+  const symbol = symbols[currency].find(s => normalized.startsWith(s));
+  if (symbol) normalized = normalized.slice(symbol.length).trim();
+  if (normalized.includes(',')) {
+    if (!/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(normalized)) throw new Error('Invalid digit grouping.');
+    normalized = normalized.replace(/,/g, '');
+  }
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(normalized);
   if (!match) throw new Error('Enter a valid monetary amount.');
   const digits = currencyDigits(currency);
   const fraction = match[3] ?? '';

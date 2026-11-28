@@ -95,3 +95,15 @@ class ExpenseResponse(BaseModel):
 
     created_at: datetime
     splits: list[ExpenseSplitResponse]
+
+class ExpenseUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    description: str = Field(min_length=1, max_length=255)
+    category: ExpenseCategory
+    expense_date: date | None
+    reference: str | None = Field(max_length=100)
+
+    @field_validator("description", "reference", mode="before")
+    @classmethod
+    def strip_text(cls, value):
+        return value.strip() if isinstance(value, str) else value

@@ -10,12 +10,12 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.db.database import get_db
 from app.models.user import User
-
 from app.schemas.group import (
     GroupCreate,
     GroupResponse,
     GroupMemberAdd,
     GroupMemberResponse,
+    GroupUpdate,
 )
 
 from app.services.group_service import (
@@ -24,6 +24,7 @@ from app.services.group_service import (
     add_group_member,
     get_group_members,
     remove_group_member,
+    update_group,
 )
 
 
@@ -133,4 +134,21 @@ def delete_group_member(
 
     return Response(
         status_code=status.HTTP_204_NO_CONTENT
+    )
+@router.patch(
+    "/{group_id}",
+    response_model=GroupResponse,
+    status_code=status.HTTP_200_OK,
+)
+def edit_group(
+    group_id: int,
+    payload: GroupUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return update_group(
+        db=db,
+        group_id=group_id,
+        requester_id=current_user.id,
+        payload=payload,
     )

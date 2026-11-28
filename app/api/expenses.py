@@ -123,3 +123,11 @@ def retrieve_expense_details(
         created_at=expense.created_at,
         splits=splits,
     )
+
+from app.schemas.expense import ExpenseUpdate
+from app.services.expense_service import update_expense
+
+@router.patch("/{group_id}/expenses/{expense_id}", response_model=ExpenseResponse)
+def edit_expense(group_id: int, expense_id: int, payload: ExpenseUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    expense, splits = update_expense(db, group_id, expense_id, current_user.id, payload)
+    return ExpenseResponse(id=expense.id, group_id=expense.group_id, paid_by=expense.paid_by, description=expense.description, amount=expense.amount, category=expense.category, expense_date=expense.expense_date, reference=expense.reference, split_method=expense.split_method, created_at=expense.created_at, splits=splits)

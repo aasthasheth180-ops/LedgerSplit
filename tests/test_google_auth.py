@@ -434,4 +434,4 @@ def test_google_password_account_linking(
         )
     )
 
-    assert user_count == 1  
+    assert user_count == 1

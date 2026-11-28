@@ -311,3 +311,23 @@ def get_expense_details(
     ).all()
 
     return expense, list(splits)
+
+from app.schemas.expense import ExpenseUpdate
+from app.services.group_service import lock_group
+
+def update_expense(db: Session, group_id: int, expense_id: int, requester_id: int, payload: ExpenseUpdate):
+    try:
+        lock_group(db, group_id)
+        expense, splits = get_expense_details(db, group_id, expense_id, requester_id)
+        if expense.paid_by != requester_id:
+            raise HTTPException(status_code=403, detail="Only the payer can edit this expense")
+        expense.description = payload.description
+        expense.category = payload.category
+        expense.expense_date = payload.expense_date
+        expense.reference = payload.reference or None
+        db.flush()
+        db.commit()
+        return expense, splits
+    except Exception:
+        db.rollback()
+        raise

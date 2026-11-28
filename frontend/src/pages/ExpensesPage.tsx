@@ -1,4 +1,5 @@
   import { useMemo, useState } from "react";
+import EditLedgerMetadata from "../components/EditLedgerMetadata";
   import { useNavigate } from "react-router-dom";
   import WavyBackground from "../components/background/WavyBackground";
   import AppSidebar from "../components/layout/AppSidebar";
@@ -6,7 +7,7 @@
   import { useGroupFinances } from '../hooks/useGroupFinances';
   import { parseMinor, minorToDecimal, formatMoney } from '../lib/currency';
   import type { GroupCurrency } from '../lib/groups';
-  type Expense = {id:number; title:string; category:string; group:string; groupId:number; date:string; payer:string; ownPayer:boolean; total:number; share:number; impact:number; status:string; reference:string; currency:GroupCurrency; splits:{name:string; amount:string}[]};
+  type Expense = {rawDate:string|null; rawReference:string|null; id:number; title:string; category:string; group:string; groupId:number; date:string; payer:string; ownPayer:boolean; total:number; share:number; impact:number; status:string; reference:string; currency:GroupCurrency; splits:{name:string; amount:string}[]};
   const money = (n:number,c:GroupCurrency) => formatMoney(minorToDecimal(n,c),c);
   const card =
     "rounded-2xl border border-[#e1e9df] bg-white/90 shadow-[0_4px_20px_rgba(43,70,48,0.06)] backdrop-blur-sm " +
@@ -28,7 +29,7 @@
       const name=(id:number)=>g.members.find(m=>m.user_id===id)?.full_name || `Member ${id}`;
       const total=parseMinor(e.amount,g.currency), share=parseMinor(e.splits.find(s=>s.user_id===currentUserId)?.amount_owed??'0',g.currency);
       const ownPayer=e.paid_by===currentUserId;
-      return {id:e.id,title:e.description,category:e.category,group:g.name,groupId:g.id,date:e.expense_date??e.created_at.slice(0,10),payer:name(e.paid_by)+(ownPayer?' (You)':''),ownPayer,total,share,impact:(ownPayer?total:0)-share,status:'Recorded',reference:e.reference??'—',currency:g.currency,splits:e.splits.map(s=>({name:name(s.user_id),amount:s.amount_owed}))};
+      return {rawDate:e.expense_date,rawReference:e.reference,id:e.id,title:e.description,category:e.category,group:g.name,groupId:g.id,date:e.expense_date??e.created_at.slice(0,10),payer:name(e.paid_by)+(ownPayer?' (You)':''),ownPayer,total,share,impact:(ownPayer?total:0)-share,status:'Recorded',reference:e.reference??'—',currency:g.currency,splits:e.splits.map(s=>({name:name(s.user_id),amount:s.amount_owed}))};
     })).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id),[groups,currentUserId]);
     const summary = new Map<GroupCurrency,{net:number;owed:number;owe:number;settled:number}>();
     for(const g of groups.filter(g=>group==='All Groups'||String(g.id)===group)) {
@@ -122,7 +123,7 @@
           <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-[#f3f7f2] text-[11px] uppercase tracking-wider text-[#687c6c] dark:bg-[#232b25] dark:text-[#aab5ad]"><tr>{["Expense & Category", "Group", "Date", "Payer", "Total", "Your Share", "Net Impact", "Status", "Action"].map(h => <th key={h} className="px-4 py-4 font-semibold">{h}</th>)}</tr></thead><tbody className="divide-y divide-[#e6eee4] dark:divide-[#35483b]">{shown.map(e => <tr
   key={e.id}
   className="transition-colors hover:bg-[#f5faf4] dark:hover:bg-[#29372e]"
-><td className="px-4 py-5"><div className="font-semibold">{e.title}</div><div className="mt-1 text-xs text-[#849587] dark:text-[#b9cbbd]">{e.category} · {e.reference}</div></td><td className="px-4 py-5">{e.group}</td><td className="px-4 py-5 whitespace-nowrap text-[#748675] dark:text-[#c0d0c4]">{e.date}</td><td className="px-4 py-5">{e.payer}</td><td className="px-4 py-5 tabular-nums font-semibold">{money(e.total,e.currency)}</td><td className="px-4 py-5 tabular-nums">{money(e.share,e.currency)}</td><td className={`px-4 py-5 tabular-nums font-bold ${e.impact >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{e.impact >= 0 ? "+" : "−"}{money(Math.abs(e.impact),e.currency)}</td><td className="px-4 py-5 text-xs">{e.status}</td><td className="px-4 py-5"><button type="button" onClick={() => setSelected(e)} className="font-semibold text-[#4a7856] hover:underline">View Split</button></td></tr>)}</tbody></table>{!isLoading && !error && shown.length === 0 && <div className="p-12 text-center text-sm text-[#748675]">No expenses match these filters.</div>}</div>
+><td className="px-4 py-5"><div className="font-semibold">{e.title}</div><div className="mt-1 text-xs text-[#849587] dark:text-[#b9cbbd]">{e.category} · {e.reference}</div></td><td className="px-4 py-5">{e.group}</td><td className="px-4 py-5 whitespace-nowrap text-[#748675] dark:text-[#c0d0c4]">{e.date}</td><td className="px-4 py-5">{e.payer}</td><td className="px-4 py-5 tabular-nums font-semibold">{money(e.total,e.currency)}</td><td className="px-4 py-5 tabular-nums">{money(e.share,e.currency)}</td><td className={`px-4 py-5 tabular-nums font-bold ${e.impact >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{e.impact >= 0 ? "+" : "−"}{money(Math.abs(e.impact),e.currency)}</td><td className="px-4 py-5 text-xs">{e.status}</td><td className="px-4 py-5"><button type="button" onClick={() => setSelected(e)} className="font-semibold text-[#4a7856] hover:underline">View Split</button>{e.ownPayer && <EditLedgerMetadata endpoint={`/groups/${e.groupId}/expenses/${e.id}`} description={e.title} category={e.category} date={e.rawDate} reference={e.rawReference} onChanged={reload}/>}</td></tr>)}</tbody></table>{!isLoading && !error && shown.length === 0 && <div className="p-12 text-center text-sm text-[#748675]">No expenses match these filters.</div>}</div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e6eee4] bg-[#f8faf7] p-4 text-xs text-[#748675] dark:border-[#35483b] dark:bg-[#1b201d] dark:text-[#aab5ad]"><span>Showing {shown.length} of {filtered.length} expenses</span><div className="flex items-center gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="rounded-lg border border-[#dce7db] px-3 py-2 disabled:opacity-40">Previous</button><span>Page {Math.min(page, totalPages)} of {totalPages}</span><button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="rounded-lg border border-[#dce7db] px-3 py-2 disabled:opacity-40">Next</button></div></div>
         </section>
       </main>
