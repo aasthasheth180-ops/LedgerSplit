@@ -26,8 +26,16 @@ def install_observability(app):
         start = time.perf_counter()
         try:
             response = await call_next(request)
-        except Exception:
-            response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
+        except Exception as exc:
+                    logger.error(json.dumps({
+                        "request_id": request_id,
+                        "method": request.method,
+                        "error_type": type(exc).__name__,
+                    }))
+                    response = JSONResponse(
+                        status_code=500,
+                        content={"detail": "Internal server error"},
+                    )
         elapsed = round((time.perf_counter()-start)*1000, 2)
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"

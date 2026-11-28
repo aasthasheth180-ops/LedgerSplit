@@ -1,0 +1,16 @@
+services:
+  migrate:
+    environment:
+      TRUSTED_ORIGINS: http://localhost:8081
+
+  backend:
+    environment:
+      TRUSTED_ORIGINS: http://localhost:8081
+
+  worker:
+    environment:
+      TRUSTED_ORIGINS: http://localhost:8081
+
+  frontend:
+    ports: !override
+      - "127.0.0.1:8081:80"
