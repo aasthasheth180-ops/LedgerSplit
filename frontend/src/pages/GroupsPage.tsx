@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import WavyBackground from "../components/background/WavyBackground";
 import AppSidebar from "../components/layout/AppSidebar";
 import AppHeader from "../components/layout/AppHeader";
-
+import LifecycleAction from "../components/LifecycleAction";
 import { useGroupFinances } from "../hooks/useGroupFinances";
 import {
   parseMinor,
@@ -36,6 +36,7 @@ const typeIcon: Record<string, string> = {
 export default function GroupsPage() {
   const [drawer, setDrawer] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"active" | "archived" | "all">("active");
   const [expanded, setExpanded] = useState<number | null>(null);
 
   const {
@@ -46,7 +47,19 @@ export default function GroupsPage() {
     reloadGroups: reload,
   } = useGroupFinances();
 
-  const visible = groups.filter((g) =>
+  const activeCount = groups.filter(g => !g.archived_at).length;
+  const archivedCount = groups.length - activeCount;
+  const scopedGroups = groups.filter(g =>
+    statusFilter === "all" ||
+    (statusFilter === "archived" ? Boolean(g.archived_at) : !g.archived_at)
+  );
+  const filters = [
+    { value: "active", label: "Active", count: activeCount },
+    { value: "archived", label: "Archived", count: archivedCount },
+    { value: "all", label: "All Groups", count: groups.length },
+  ] as const;
+
+  const visible = scopedGroups.filter((g) =>
     `${g.name} ${getGroupCategoryLabel(g)} ${g.members
       .map((m) => m.full_name ?? "")
       .join(" ")}`
@@ -55,14 +68,14 @@ export default function GroupsPage() {
   );
 
   const members = new Set(
-    groups.flatMap((g) =>
+    scopedGroups.flatMap((g) =>
       g.members.map((m) => m.user_id)
     )
   ).size;
 
   const totals = new Map<GroupCurrency, number>();
 
-  for (const g of groups) {
+  for (const g of scopedGroups) {
     totals.set(
       g.currency,
       (totals.get(g.currency) ?? 0) +
@@ -135,10 +148,20 @@ export default function GroupsPage() {
         </div>
 
         {/* Refresh */}
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <span className="text-sm font-semibold text-[#325f3f] dark:text-[#d4efda]">
-            All groups
-          </span>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <div role="group" aria-label="Group status filter" className="flex flex-wrap gap-1 rounded-xl border border-[#dce7db] bg-white p-1 dark:border-[#35483b] dark:bg-[#232b25]">
+            {filters.map(filter => (
+              <button
+                key={filter.value}
+                type="button"
+                aria-pressed={statusFilter === filter.value}
+                onClick={() => { setStatusFilter(filter.value); setExpanded(null); }}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${statusFilter === filter.value ? "bg-[#e3efe5] text-[#325f3f] dark:bg-[#405a47] dark:text-[#d4efda]" : "text-[#717971] hover:bg-[#eef4ef] dark:text-[#b9cbbd] dark:hover:bg-[#304236]"}`}
+              >
+                {filter.label} ({filter.count})
+              </button>
+            ))}
+          </div>
 
           <button
             type="button"
@@ -173,15 +196,15 @@ export default function GroupsPage() {
               <Metric
                 icon="♧"
                 title="Your Groups"
-                value={String(groups.length)}
-                note="Groups you belong to"
+                value={String(scopedGroups.length)}
+                note="Groups in selected status"
               />
 
               <Metric
                 icon="♙"
                 title="Unique Members"
                 value={String(members)}
-                note="Across your groups"
+                note="Across selected groups"
               />
 
               <Metric
@@ -197,7 +220,7 @@ export default function GroupsPage() {
                       )}`
                   ).join(" · ") || "—"
                 }
-                note="Your net balance, separately by currency"
+                note="Selected groups, separately by currency"
                 accent
               />
             </section>
@@ -280,12 +303,39 @@ export default function GroupsPage() {
                       </div>
                     </div>
 
-                    {/* Edit group — owners only */}
-                    {isOwner && (
-                      <EditGroup
-                        group={g}
-                        onChanged={reload}
-                      />
+                    {/* Group lifecycle actions */}
+                    {g.archived_at ? (
+                      <div className="mt-4 rounded-xl bg-gray-100 p-3 text-xs font-semibold text-gray-600 dark:bg-[#304236] dark:text-gray-300">
+                        Archived · Read-only history
+                      </div>
+                    ) : (
+                      isOwner && (
+                        <>
+                          <EditGroup
+                            group={g}
+                            onChanged={reload}
+                          />
+
+                          <div className="mt-3 flex flex-col items-start gap-2">
+                            <LifecycleAction
+                              path={`/groups/${g.id}`}
+                              method="DELETE"
+                              label="Delete Group"
+                              confirmation={`Delete "${g.name}"? Only groups without financial history can be deleted.`}
+                              onChanged={reload}
+                              destructive
+                            />
+
+                            <LifecycleAction
+                              path={`/groups/${g.id}/archive`}
+                              method="POST"
+                              label="Archive Group"
+                              confirmation={`Archive "${g.name}"? All balances must be settled. Its history will remain available in read-only mode.`}
+                              onChanged={reload}
+                            />
+                          </div>
+                        </>
+                      )
                     )}
 
                     {/* View balances */}
@@ -355,7 +405,7 @@ export default function GroupsPage() {
                       <GroupMembers
                         groupId={g.id}
                         members={g.members}
-                        isOwner={isOwner}
+                        isOwner={isOwner && !g.archived_at}
                         onChanged={reload}
                       />
                     )}
@@ -370,26 +420,29 @@ export default function GroupsPage() {
                 <div className="text-4xl">♧</div>
 
                 <h2 className="mt-3 text-xl font-bold text-[#325f3f] dark:text-[#f3f5f2]">
-                  No groups found
+                  {statusFilter === "archived" && !search.trim() ? "No archived groups" : "No groups found"}
                 </h2>
 
                 <p className="mt-2 text-sm text-[#717971] dark:text-[#b9cbbd]">
-                  Try a different search or create your
-                  first group.
+                  {statusFilter === "archived" && !search.trim()
+                    ? "Archived groups will appear here with their read-only history."
+                    : "Try a different search or create your first group."}
                 </p>
 
-                <Link
-                  to="/groups/new"
-                  className="mt-5 inline-flex rounded-xl bg-[#4a7856] px-5 py-3 text-sm font-bold text-white"
-                >
-                  Create Group
-                </Link>
+                {statusFilter !== "archived" && (
+                  <Link
+                    to="/groups/new"
+                    className="mt-5 inline-flex rounded-xl bg-[#4a7856] px-5 py-3 text-sm font-bold text-white"
+                  >
+                    Create Group
+                  </Link>
+                )}
               </div>
             )}
 
             {/* Group count */}
             <p className="mt-8 text-xs text-[#717971] dark:text-[#b9cbbd]">
-              Showing {visible.length} of {groups.length} groups
+              Showing {visible.length} of {scopedGroups.length} groups in this view
             </p>
           </>
         )}

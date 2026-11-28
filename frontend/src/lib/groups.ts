@@ -32,6 +32,7 @@ export interface GroupCreateRequest {
 }
 
 export interface GroupResponse {
+  archived_at?: string | null;
   id: number;
   name: string;
   description: string | null;

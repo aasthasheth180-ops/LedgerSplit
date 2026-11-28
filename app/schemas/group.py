@@ -93,6 +93,7 @@ class GroupCreate(BaseModel):
 
 
 class GroupResponse(BaseModel):
+    archived_at: datetime | None = None
     id: int
     name: str
     description: str | None

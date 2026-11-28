@@ -3,7 +3,7 @@ from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlalchemy import select, update, func
 from sqlalchemy.orm import Session
-
+from app.services.group_service import require_active_group
 from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.payment import Payment
@@ -366,7 +366,7 @@ def list_group_payments(
     # 1. Verify that the group exists.
     group = db.get(Group, group_id)
 
-    if group is None:
+    if group is None or group.deleted_at is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Group not found",

@@ -152,3 +152,35 @@ def edit_group(
         requester_id=current_user.id,
         payload=payload,
     )
+
+from app.services.lifecycle_service import (
+    delete_group,
+    archive_group,
+)
+
+
+@router.delete(
+    "/{group_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def delete_existing_group(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    delete_group(db, group_id, current_user.id)
+
+    return Response(status_code=204)
+
+
+@router.post(
+    "/{group_id}/archive",
+    response_model=GroupResponse,
+)
+def archive_existing_group(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return archive_group(db, group_id, current_user.id)

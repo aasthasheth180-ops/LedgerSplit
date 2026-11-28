@@ -4,7 +4,7 @@ from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
+from app.services.group_service import require_active_group
 from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.expense import Expense
@@ -34,6 +34,7 @@ def create_expense(
             detail="Group not found",
         )
 
+    require_active_group(group)
     # 2. Only group members can record expenses.
     member_ids = set(
         db.scalars(
@@ -60,6 +61,11 @@ def create_expense(
         )
 
         if existing_expense is not None:
+            if existing_expense.voided_at is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="This expense was previously deleted",
+                )
             existing_splits = list(
                 db.scalars(
                     select(ExpenseSplit)
@@ -183,10 +189,6 @@ def create_expense(
         db.rollback()
         raise
 
-
-
-
-
 def get_group_expenses(
     db: Session,
     group_id: int,
@@ -196,7 +198,7 @@ def get_group_expenses(
     # Verify the group exists.
     group = db.get(Group, group_id)
 
-    if group is None:
+    if group is None or group.deleted_at is not None:
         raise HTTPException(
             status_code=404,
             detail="Group not found",
@@ -220,7 +222,7 @@ def get_group_expenses(
     expenses = list(
         db.scalars(
             select(Expense)
-            .where(Expense.group_id == group_id)
+            .where(Expense.group_id == group_id,Expense.voided_at.is_(None),)
             .order_by(
                 Expense.created_at.desc(),
                 Expense.id.desc(),
@@ -269,7 +271,7 @@ def get_expense_details(
     # 1. Verify that the group exists.
     group = db.get(Group, group_id)
 
-    if group is None:
+    if group is None or group.deleted_at is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Group not found",
@@ -294,6 +296,7 @@ def get_expense_details(
         select(Expense).where(
             Expense.id == expense_id,
             Expense.group_id == group_id,
+            Expense.voided_at.is_(None),
         )
     )
 
@@ -317,7 +320,8 @@ from app.services.group_service import lock_group
 
 def update_expense(db: Session, group_id: int, expense_id: int, requester_id: int, payload: ExpenseUpdate):
     try:
-        lock_group(db, group_id)
+        group = lock_group(db, group_id)
+        require_active_group(group)
         expense, splits = get_expense_details(db, group_id, expense_id, requester_id)
         if expense.paid_by != requester_id:
             raise HTTPException(status_code=403, detail="Only the payer can edit this expense")

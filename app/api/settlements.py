@@ -23,10 +23,10 @@ def get_group_settlements(
     # Check whether the group exists.
     group = db.get(Group, group_id)
 
-    if group is None:
+    if group is None or group.deleted_at is not None:
         raise HTTPException(
-            status_code=404,
-            detail="Group not found",
+                status_code=404,
+                detail="Group not found",
         )
 
     # Check whether the user belongs to this group.

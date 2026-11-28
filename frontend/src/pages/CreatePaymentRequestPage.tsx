@@ -23,7 +23,9 @@ export default function CreatePaymentRequestPage() {
  const [dueDate,setDueDate]=useState("");
  const [note,setNote]=useState("");
  const [message,setMessage]=useState("");
- const group=groups.find(g=>String(g.id)===groupId);
+ const group = groups.find(
+  g => String(g.id) === groupId && !g.archived_at
+);
  const currency=group?.currency ?? "USD";
  const own=Math.max(0,parseMinor(group?.balances.find(b=>b.user_id===currentUserId)?.net_balance ?? "0",currency));
  const eligible=(group?.members ?? []).filter(m=>m.user_id!==currentUserId && own>0 && parseMinor(group?.balances.find(b=>b.user_id===m.user_id)?.net_balance ?? "0",currency)<0 && !group?.paymentRequests.some(r=>r.requester_id===currentUserId && r.debtor_id===m.user_id && r.status==="pending"));
@@ -79,7 +81,7 @@ export default function CreatePaymentRequestPage() {
           <div className="grid gap-8 p-6 sm:p-9 lg:grid-cols-12">
           <fieldset disabled={submission.isLoading} className="space-y-5 lg:col-span-7 disabled:opacity-70">
           <h2 className="text-sm font-bold uppercase tracking-wider text-[#4a7856] dark:text-[#a1d5ad]">Request Details</h2>
-          <label className="block text-sm font-semibold">Target Group<select className={`${inputClass} mt-2`} value={groupId} onChange={e=>{setGroupId(e.target.value);setDebtorId("");setAmount("");setMessage("");}} required><option value="">Select group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name} · {g.currency}</option>)}</select></label>
+          <label className="block text-sm font-semibold">Target Group<select className={`${inputClass} mt-2`} value={groupId} onChange={e=>{setGroupId(e.target.value);setDebtorId("");setAmount("");setMessage("");}} required><option value="">Select group</option>{groups.filter(g => !g.archived_at).map(g=><option key={g.id} value={g.id}>{g.name} · {g.currency}</option>)}</select></label>
           {!groups.length && <p>No groups available. <Link to="/groups/new" className="underline">Create a group</Link>.</p>}
           <label className="block text-sm font-semibold">Recipient Member<select className={`${inputClass} mt-2`} value={debtorId} onChange={e=>{setDebtorId(e.target.value);setAmount("");setMessage("");}} required><option value="">Select member</option>{eligible.map(m=><option key={m.user_id} value={m.user_id}>{m.full_name ?? `User ${m.user_id}`}</option>)}</select></label>
           {group && !eligible.length && <p className="text-sm">No eligible debtors. A positive balance and a member with outstanding debt are required, with no existing pending request for that pair.</p>}

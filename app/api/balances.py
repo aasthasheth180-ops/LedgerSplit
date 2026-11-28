@@ -28,7 +28,7 @@ def get_group_balances(
         select(Group).where(Group.id == group_id)
     )
 
-    if group is None:
+    if group is None or group.deleted_at is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Group not found",

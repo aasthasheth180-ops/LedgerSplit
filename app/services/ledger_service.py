@@ -39,8 +39,9 @@ def calculate_group_balances(
     # Step 2: Retrieve expenses.
     expenses = db.scalars(
         select(Expense).where(
-            Expense.group_id == group_id
-        )
+                Expense.group_id == group_id,
+                Expense.voided_at.is_(None),
+)
     ).all()
 
     # Step 3: Credit expense payers.

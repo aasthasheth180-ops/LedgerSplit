@@ -7,7 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.models.payment_request import PaymentRequest
 from app.schemas.payment_request import PaymentRequestCreate
-from app.services.group_service import lock_group, get_membership
+from app.services.group_service import (
+    lock_group,
+    get_membership,
+    require_active_group,
+)
 from app.services.ledger_service import calculate_group_balances
 from app.services.notification_service import notify
 
@@ -21,6 +25,7 @@ def create_payment_request(
 ) -> PaymentRequest:
     try:
         group = lock_group(db, group_id)
+        require_active_group(group)
 
         if get_membership(db, group_id, requester_id) is None:
             raise HTTPException(
@@ -148,7 +153,13 @@ def list_payment_requests(
     group_id: int,
     user_id: int,
 ) -> list[PaymentRequest]:
-    lock_group(db, group_id)
+    group = lock_group(db, group_id)
+
+    if group.deleted_at is not None:
+        raise HTTPException(
+            status_code=404,
+            detail="Group not found",
+        )
 
     if get_membership(db, group_id, user_id) is None:
         raise HTTPException(
@@ -175,7 +186,8 @@ def cancel_payment_request(
     requester_id: int,
 ) -> PaymentRequest:
     try:
-        lock_group(db, group_id)
+        group = lock_group(db, group_id)
+        require_active_group(group)
 
         if get_membership(db, group_id, requester_id) is None:
             raise HTTPException(
@@ -260,7 +272,8 @@ from app.schemas.payment_request import PaymentRequestUpdate
 
 def update_payment_request(db: Session, group_id: int, request_id: int, requester_id: int, payload: PaymentRequestUpdate):
     try:
-        lock_group(db, group_id)
+        group = lock_group(db, group_id)
+        require_active_group(group)
         if get_membership(db, group_id, requester_id) is None:
             raise HTTPException(status_code=403, detail="You are not a member of this group")
         item = db.scalar(select(PaymentRequest).where(PaymentRequest.id == request_id, PaymentRequest.group_id == group_id))

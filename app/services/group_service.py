@@ -53,6 +53,18 @@ def lock_group(
 
     return group
 
+def require_active_group(group: Group) -> None:
+    if group.deleted_at is not None:
+        raise HTTPException(
+            status_code=404,
+            detail="Group not found",
+        )
+
+    if group.archived_at is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Archived groups are read-only",
+        )
 
 def get_membership(
     db: Session,
@@ -116,6 +128,11 @@ def create_group(
                 )
             )
             if existing_group is not None:
+                if existing_group.deleted_at is not None:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="This group was previously deleted",
+                    )
                 if existing_group.request_fingerprint != fingerprint:
                     raise HTTPException(
                         status_code=409,
@@ -197,7 +214,10 @@ def get_user_groups(
             GroupMember,
             Group.id == GroupMember.group_id,
         )
-        .where(GroupMember.user_id == user_id)
+        .where(
+                GroupMember.user_id == user_id,
+                Group.deleted_at.is_(None),
+        )
         .order_by(
             Group.created_at.desc(),
             Group.id.desc(),
@@ -216,7 +236,8 @@ def add_group_member(
     email: str | None = None,
 ) -> GroupMember:
     try:
-        lock_group(db, group_id)
+        group = lock_group(db, group_id)
+        require_active_group(group)
 
         requester = get_membership(
             db,
@@ -302,11 +323,11 @@ def get_group_members(
 ) -> list[GroupMember]:
     group = db.get(Group, group_id)
 
-    if group is None:
+    if group is None or group.deleted_at is not None:
         raise HTTPException(
-            status_code=404,
-            detail="Group not found",
-        )
+                status_code=404,
+                detail="Group not found",
+            )
 
     requester = get_membership(
         db,
@@ -346,7 +367,8 @@ def remove_group_member(
     requester_id: int,
 ) -> None:
     try:
-        lock_group(db, group_id)
+        group = lock_group(db, group_id)
+        require_active_group(group)
 
         requester = get_membership(
             db,
@@ -456,7 +478,7 @@ def update_group(
 ) -> Group:
 
     try:
-        group = lock_group(db, group_id)
+        require_active_group(group)
 
         requester = get_membership(
             db,
